@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../core/theme/app_colors.dart';
 import '../models/daily_record.dart';
 import '../providers/app_providers.dart';
+import 'daily_tracker_screen.dart';
 import '../services/prayer_times_service.dart';
 import '../widgets/common_widgets.dart';
 
@@ -92,7 +93,12 @@ class JourneyScreen extends ConsumerWidget {
             ),
           ),
           SliverToBoxAdapter(
-            child: _buildDayGrid(context, ramadanRecords, dayOfRamadan),
+            child: _buildDayGrid(
+              context,
+              ramadanRecords,
+              dayOfRamadan,
+              ramadanStart,
+            ),
           ),
 
           // Weekly streaks
@@ -203,7 +209,15 @@ class JourneyScreen extends ConsumerWidget {
     BuildContext context,
     List<DailyRecord?> records,
     int currentDay,
+    String ramadanStart,
   ) {
+    DateTime? startDate;
+    try {
+      startDate = DateTime.parse(ramadanStart);
+    } catch (_) {
+      startDate = null;
+    }
+
     return GlassCard(
       child: Wrap(
         spacing: 6,
@@ -235,49 +249,64 @@ class JourneyScreen extends ConsumerWidget {
             textColor = AppColors.textDim;
           }
 
-          return Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-              border: isCurrent
-                  ? Border.all(color: AppColors.gold, width: 2)
-                  : null,
-              boxShadow: isCurrent
-                  ? [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.3),
-                        blurRadius: 8,
+          final canEdit = !isFuture && startDate != null;
+          final dateForDay = startDate?.add(Duration(days: i));
+
+          return GestureDetector(
+            onTap: canEdit && dateForDay != null
+                ? () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            DailyTrackerScreen(initialDate: dateForDay),
                       ),
-                    ]
-                  : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '$day',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 13,
-                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                if (isPast && score > 0)
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: score >= 75
-                          ? AppColors.gold
-                          : score >= 50
-                          ? AppColors.goldDim
-                          : AppColors.textDim,
-                      shape: BoxShape.circle,
+                    );
+                  }
+                : null,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(10),
+                border: isCurrent
+                    ? Border.all(color: AppColors.gold, width: 2)
+                    : null,
+                boxShadow: isCurrent
+                    ? [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$day',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 13,
+                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
-              ],
+                  if (isPast && score > 0)
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: score >= 75
+                            ? AppColors.gold
+                            : score >= 50
+                            ? AppColors.goldDim
+                            : AppColors.textDim,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         }),
@@ -535,12 +564,15 @@ class JourneyScreen extends ConsumerWidget {
   }
 
   String _getMotivationalMessage(int day) {
-    if (day <= 7)
+    if (day <= 7) {
       return 'Every journey begins with a single step. You\'re building your foundation.';
-    if (day <= 14)
+    }
+    if (day <= 14) {
       return 'You\'re building momentum. Keep pushing beyond your comfort zone.';
-    if (day <= 21)
+    }
+    if (day <= 21) {
       return 'Deepen your connection. Focus on the quality of your worship.';
+    }
     return 'The final sprint! Seek Laylat al-Qadr with all your heart.';
   }
 }

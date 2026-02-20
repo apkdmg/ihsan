@@ -1,16 +1,133 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../core/theme/app_colors.dart';
 import '../models/daily_record.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
 
-class DailyTrackerScreen extends ConsumerWidget {
-  const DailyTrackerScreen({super.key});
+class DailyTrackerScreen extends ConsumerStatefulWidget {
+  final DateTime? initialDate;
+
+  const DailyTrackerScreen({super.key, this.initialDate});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DailyTrackerScreen> createState() => _DailyTrackerScreenState();
+}
+
+class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
+  late DateTime _selectedDate;
+  bool _isLoadingDate = true;
+
+  DateTime get _today => DateUtils.dateOnly(DateTime.now());
+  bool get _isTodaySelected => DateUtils.isSameDay(_selectedDate, _today);
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = DateUtils.dateOnly(widget.initialDate ?? DateTime.now());
+    _loadSelectedDate();
+  }
+
+  @override
+  void dispose() {
+    if (widget.initialDate != null) {
+      ref.read(dailyRecordProvider.notifier).loadToday();
+    }
+    super.dispose();
+  }
+
+  String _dateKey(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+  String _shortDate(DateTime date) => DateFormat('d MMM').format(date);
+  String _fullDate(DateTime date) => DateFormat('EEE, d MMM yyyy').format(date);
+
+  Future<void> _loadSelectedDate() async {
+    await ref
+        .read(dailyRecordProvider.notifier)
+        .loadDate(_dateKey(_selectedDate));
+    if (!mounted) return;
+    setState(() => _isLoadingDate = false);
+  }
+
+  Future<void> _handleDatePick() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(DateTime.now().year, 1, 1),
+      lastDate: _today,
+      helpText: 'Select activity date',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.gold,
+              onPrimary: AppColors.backgroundPrimary,
+              surface: AppColors.surface,
+              onSurface: AppColors.textPrimary,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: AppColors.surface,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+
+    if (picked == null) return;
+    final selected = DateUtils.dateOnly(picked);
+
+    if (widget.initialDate == null && !DateUtils.isSameDay(selected, _today)) {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DailyTrackerScreen(initialDate: selected),
+        ),
+      );
+      return;
+    }
+
+    if (widget.initialDate != null && DateUtils.isSameDay(selected, _today)) {
+      await _goBackToToday();
+      return;
+    }
+
+    if (DateUtils.isSameDay(selected, _selectedDate)) return;
+
+    setState(() {
+      _selectedDate = selected;
+      _isLoadingDate = true;
+    });
+    await _loadSelectedDate();
+  }
+
+  Future<void> _goBackToToday() async {
+    if (widget.initialDate != null && Navigator.of(context).canPop()) {
+      await ref.read(dailyRecordProvider.notifier).loadToday();
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    final today = _today;
+    if (DateUtils.isSameDay(today, _selectedDate)) return;
+
+    setState(() {
+      _selectedDate = today;
+      _isLoadingDate = true;
+    });
+    await _loadSelectedDate();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final record = ref.watch(dailyRecordProvider);
+
+    if (_isLoadingDate) {
+      return const Scaffold(
+        backgroundColor: AppColors.backgroundPrimary,
+        body: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,
@@ -20,9 +137,26 @@ class DailyTrackerScreen extends ConsumerWidget {
           SliverAppBar(
             floating: true,
             backgroundColor: AppColors.backgroundPrimary,
-            title: const Text('Daily Tracker'),
+            title: Text(
+              _isTodaySelected ? 'Daily Tracker' : _fullDate(_selectedDate),
+            ),
             centerTitle: true,
             actions: [
+              TextButton.icon(
+                onPressed: _handleDatePick,
+                icon: const Icon(
+                  Icons.calendar_month_rounded,
+                  size: 16,
+                  color: AppColors.gold,
+                ),
+                label: Text(
+                  _isTodaySelected ? 'Today' : _shortDate(_selectedDate),
+                  style: const TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: CircularScoreRing(
@@ -34,6 +168,57 @@ class DailyTrackerScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          if (!_isTodaySelected)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.history_toggle_off_rounded,
+                        color: AppColors.gold,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Editing: ${_fullDate(_selectedDate)}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _goBackToToday,
+                        child: const Text(
+                          'Back to Today',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           // ── PRAYERS ──
           const SliverToBoxAdapter(

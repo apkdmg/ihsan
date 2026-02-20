@@ -75,6 +75,13 @@ final recordForDateProvider = FutureProvider.family<DailyRecord, String>((
   return notifier.getOrCreate(dateKey);
 });
 
+/// Provides an existing record for a date key without creating one.
+final existingRecordForDateProvider =
+    FutureProvider.family<DailyRecord?, String>((ref, dateKey) async {
+      final notifier = ref.read(dailyRecordProvider.notifier);
+      return notifier.getExisting(dateKey);
+    });
+
 class DailyRecordNotifier extends Notifier<DailyRecord> {
   Box<DailyRecord>? _box;
   bool _initialized = false;
@@ -87,30 +94,38 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
     return DailyRecord(dateKey: _todayKey);
   }
 
-  Future<void> _init() async {
+  Future<void> _ensureInitialized() async {
+    if (_initialized) return;
     _box = await Hive.openBox<DailyRecord>(_dailyRecordsBox);
-    final today = _box?.get(_todayKey);
-    if (today != null) {
-      state = today;
-    } else {
-      final newRecord = DailyRecord(dateKey: _todayKey);
-      await _box?.put(_todayKey, newRecord);
-      state = newRecord;
-    }
     _initialized = true;
   }
 
+  Future<void> _init() async {
+    await _ensureInitialized();
+    state = await getOrCreate(_todayKey);
+  }
+
   Future<DailyRecord> getOrCreate(String dateKey) async {
-    if (!_initialized) {
-      _box = await Hive.openBox<DailyRecord>(_dailyRecordsBox);
-      _initialized = true;
-    }
+    await _ensureInitialized();
     var record = _box?.get(dateKey);
     if (record == null) {
       record = DailyRecord(dateKey: dateKey);
       await _box?.put(dateKey, record);
     }
     return record;
+  }
+
+  Future<DailyRecord?> getExisting(String dateKey) async {
+    await _ensureInitialized();
+    return _box?.get(dateKey);
+  }
+
+  Future<void> loadDate(String dateKey) async {
+    state = await getOrCreate(dateKey);
+  }
+
+  Future<void> loadToday() async {
+    await loadDate(_todayKey);
   }
 
   Future<void> _save() async {
