@@ -10,6 +10,7 @@ import '../providers/app_providers.dart';
 import '../services/prayer_times_service.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/quran_log_sheet.dart';
+import 'adhkar_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -75,6 +76,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ] else ...[
             // Ramadan is active — show full tracker
             SliverToBoxAdapter(child: _buildPrayerRow(context, record)),
+            SliverToBoxAdapter(
+              child: _buildAdhkarCard(context, prayerTimesAsync),
+            ),
             SliverToBoxAdapter(
               child: _buildFastingCard(context, prayerTimesAsync),
             ),
@@ -700,6 +704,108 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── NEW: Adhkar Quick Access Card ──
+  Widget _buildAdhkarCard(
+    BuildContext context,
+    AsyncValue<TodayPrayerTimes?> timesAsync,
+  ) {
+    bool isMorning = true; // Default to morning
+    String title = 'Morning Adhkar';
+    String subtitle = 'Fajr to Dhuhr';
+    IconData icon = Icons.wb_twilight;
+
+    final times = timesAsync.whenOrNull(data: (t) => t);
+    if (times != null) {
+      final now = DateTime.now();
+      // Logic: Morning Adhkar is recommended from Fajr until Dhuhr (or Maghrib for some scholars, but we use Fajr-Asr window).
+      // Evening Adhkar is from Asr until Isha/Fajr.
+      if (now.isAfter(times.asr) || now.isBefore(times.fajr)) {
+        isMorning = false;
+        title = 'Evening Adhkar';
+        subtitle = 'Asr to Fajr';
+        icon = Icons.nights_stay;
+      }
+    } else {
+      // Fallback logic based on hour if API is loading/fails (approximate)
+      final hour = DateTime.now().hour;
+      if (hour >= 15 || hour < 5) {
+        // 3 PM to 5 AM
+        isMorning = false;
+        title = 'Evening Adhkar';
+        subtitle = 'Daily Remembrance';
+        icon = Icons.nights_stay;
+      }
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => AdhkarScreen(isMorning: isMorning),
+          ),
+        );
+      },
+      child: GlassCard(
+        borderColor: AppColors.gold.withValues(alpha: 0.15),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFFD4AF37),
+                    Color(0xFFA67C00), // Darker gold for contrast
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: AppColors.backgroundPrimary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: AppColors.gold,
+              ),
+            ),
+          ],
         ),
       ),
     );

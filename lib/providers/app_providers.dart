@@ -279,6 +279,15 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
   }
 
   // ── Toggle fields ──
+  Future<void> setAdhkarComplete(bool isMorning, bool value) async {
+    if (isMorning) {
+      state = _copyWith(morningAdhkar: value);
+    } else {
+      state = _copyWith(eveningAdhkar: value);
+    }
+    await _save();
+  }
+
   Future<void> toggleField(String field) async {
     switch (field) {
       case 'morningAdhkar':

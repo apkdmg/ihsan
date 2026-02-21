@@ -456,13 +456,21 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Daily Reading',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          children: [
+                            const Text(
+                              'Daily Reading',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (isComplete) ...[
+                              const SizedBox(width: 6),
+                              const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -470,8 +478,8 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
                           style: TextStyle(
                             color: isComplete
                                 ? AppColors.gold
-                                : AppColors.textDim,
-                            fontSize: 12,
+                                : AppColors.textSecondary,
+                            fontSize: 13,
                             fontWeight: isComplete
                                 ? FontWeight.w600
                                 : FontWeight.w400,
@@ -479,30 +487,11 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
                         ),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () =>
+                    IconButton(
+                      onPressed: () =>
                           showQuranLogSheet(context, ref, record, profile),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.gold.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Text(
-                          isComplete ? 'Edit Log' : 'Log Reading',
-                          style: const TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      icon: const Icon(Icons.edit_rounded, color: AppColors.textSecondary, size: 18),
+                      tooltip: 'Edit Log',
                     ),
                   ],
                 ),
