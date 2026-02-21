@@ -70,8 +70,31 @@ class JourneyScreen extends ConsumerWidget {
           SliverAppBar(
             floating: true,
             backgroundColor: AppColors.backgroundPrimary,
-            title: const Text('Ramadan Journey'),
-            centerTitle: true,
+            automaticallyImplyLeading: false,
+            titleSpacing: 16,
+            title: Row(
+              children: [
+                if (Navigator.of(context).canPop()) ...[
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                Expanded(
+                  child: Text(
+                    'Ramadan Journey',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineMedium?.copyWith(color: AppColors.gold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
 
           // Overall progress

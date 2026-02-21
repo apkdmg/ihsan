@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../core/theme/app_colors.dart';
+import '../widgets/quran_log_sheet.dart';
 import '../models/daily_record.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
@@ -118,6 +119,84 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
     await _loadSelectedDate();
   }
 
+  Future<void> _showZikrInputDialog(
+    BuildContext context,
+    String title,
+    String zikrKey,
+    int currentCount,
+    int target,
+    WidgetRef ref,
+  ) async {
+    final controller = TextEditingController(text: currentCount.toString());
+
+    // Select all text when focused
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            dialogTheme: const DialogThemeData(
+              backgroundColor: AppColors.surface,
+            ),
+          ),
+          child: AlertDialog(
+            title: Text(
+              'Update $title',
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Count (Target: $target)',
+                labelStyle: const TextStyle(color: AppColors.textDim),
+                enabledBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.surfaceLight),
+                ),
+                focusedBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.gold),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  final newCount = int.tryParse(controller.text);
+                  Navigator.of(context).pop(newCount);
+                },
+                child: const Text(
+                  'Save',
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result != null && result >= 0) {
+      ref.read(dailyRecordProvider.notifier).setZikrCount(zikrKey, result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final record = ref.watch(dailyRecordProvider);
@@ -137,10 +216,33 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
           SliverAppBar(
             floating: true,
             backgroundColor: AppColors.backgroundPrimary,
-            title: Text(
-              _isTodaySelected ? 'Daily Tracker' : _fullDate(_selectedDate),
+            automaticallyImplyLeading: false,
+            titleSpacing: 16,
+            title: Row(
+              children: [
+                if (Navigator.of(context).canPop()) ...[
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                Expanded(
+                  child: Text(
+                    _isTodaySelected
+                        ? 'Daily Tracker'
+                        : _fullDate(_selectedDate),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineMedium?.copyWith(color: AppColors.gold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            centerTitle: true,
             actions: [
               TextButton.icon(
                 onPressed: _handleDatePick,
@@ -320,9 +422,128 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
     DailyRecord record,
     WidgetRef ref,
   ) {
+    final profile = ref.watch(userProfileProvider);
+    final goal = profile.quranDailyGoal;
+    final progress = goal > 0
+        ? (record.quranPagesRead / goal).clamp(0.0, 1.0)
+        : 0.0;
+    final isComplete = goal > 0 && record.quranPagesRead >= goal;
+    int lastPage = record.quranLastPage ?? ((profile.quranStartPage ?? 1) - 1);
+    if (lastPage == 0) lastPage = profile.quranStartPage ?? 1;
+
     return GlassCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Quran Progress & Logging ──
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundPrimary.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isComplete
+                    ? AppColors.gold.withValues(alpha: 0.3)
+                    : Colors.transparent,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Daily Reading',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${record.quranPagesRead} / $goal pages',
+                          style: TextStyle(
+                            color: isComplete
+                                ? AppColors.gold
+                                : AppColors.textDim,
+                            fontSize: 12,
+                            fontWeight: isComplete
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                    GestureDetector(
+                      onTap: () =>
+                          showQuranLogSheet(context, ref, record, profile),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Text(
+                          isComplete ? 'Edit Log' : 'Log Reading',
+                          style: const TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: AppColors.surface.withValues(alpha: 0.5),
+                    valueColor: AlwaysStoppedAnimation(
+                      isComplete ? AppColors.gold : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                if (lastPage > 0) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.bookmark_rounded,
+                        size: 14,
+                        color: AppColors.gold.withValues(alpha: 0.8),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Up to page $lastPage',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Other Quran Activities ──
           _ToggleTile(
             title: 'Listened to Recitation',
             icon: Icons.headphones_rounded,
@@ -367,53 +588,64 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
             final complete = count >= target;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    complete
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: complete ? AppColors.success : AppColors.textDim,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      z.$1,
-                      style: TextStyle(
-                        color: complete
-                            ? AppColors.success
-                            : AppColors.textPrimary,
-                        fontWeight: complete
-                            ? FontWeight.w600
-                            : FontWeight.w400,
+              child: GestureDetector(
+                onTap: () => _showZikrInputDialog(
+                  context,
+                  z.$1,
+                  z.$2,
+                  count,
+                  target,
+                  ref,
+                ),
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  children: [
+                    Icon(
+                      complete
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: complete ? AppColors.success : AppColors.textDim,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        z.$1,
+                        style: TextStyle(
+                          color: complete
+                              ? AppColors.success
+                              : AppColors.textPrimary,
+                          fontWeight: complete
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: complete
-                          ? AppColors.success.withValues(alpha: 0.15)
-                          : AppColors.surfaceLight.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$count / $target',
-                      style: TextStyle(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
                         color: complete
-                            ? AppColors.success
-                            : AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.surfaceLight.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '$count / $target',
+                        style: TextStyle(
+                          color: complete
+                              ? AppColors.success
+                              : AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }),

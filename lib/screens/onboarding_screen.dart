@@ -18,6 +18,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _currentPage = 0;
   final _nameController = TextEditingController();
   int _quranGoal = 20;
+  int _quranStartPage = 1;
   String _selectedZoneCode = 'WLY01';
   String _selectedZoneName = 'Kuala Lumpur';
 
@@ -52,7 +53,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _next() {
-    if (_currentPage < 3) {
+    if (_currentPage < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutCubic,
@@ -72,6 +73,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           zoneCode: _selectedZoneCode,
           zoneName: _selectedZoneName,
           quranGoal: _quranGoal,
+          quranStartPage: _quranStartPage,
         );
     widget.onComplete();
   }
@@ -88,7 +90,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (i) {
+                children: List.generate(5, (i) {
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -114,6 +116,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _buildNamePage(context),
                   _buildZonePage(context),
                   _buildGoalPage(context),
+                  _buildStartPagePage(context),
                 ],
               ),
             ),
@@ -134,7 +137,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     elevation: 0,
                   ),
                   child: Text(
-                    _currentPage < 3 ? 'Continue' : 'Begin Ramadan Journey',
+                    _currentPage < 4 ? 'Continue' : 'Begin Ramadan Journey',
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
@@ -419,6 +422,107 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   child: Text(
                     '$p pages',
+                    style: TextStyle(
+                      color: selected
+                          ? AppColors.gold
+                          : AppColors.textSecondary,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartPagePage(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.bookmark, color: AppColors.gold, size: 48),
+          const SizedBox(height: 24),
+          Text(
+            'Starting Page',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Where are you starting from?',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Page 1 to start a new Khatam',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textDim),
+          ),
+          const SizedBox(height: 40),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _GoalButton(
+                icon: Icons.remove,
+                onTap: () {
+                  if (_quranStartPage > 1) {
+                    setState(() => _quranStartPage--);
+                  }
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  '$_quranStartPage',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gold,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              _GoalButton(
+                icon: Icons.add,
+                filled: true,
+                onTap: () {
+                  if (_quranStartPage < 604) {
+                    setState(() => _quranStartPage++);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('Page Number', style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 24),
+          // Presets
+          Wrap(
+            spacing: 8,
+            children: [1, 100, 200, 300].map((p) {
+              final selected = _quranStartPage == p;
+              return GestureDetector(
+                onTap: () => setState(() => _quranStartPage = p),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.gold.withValues(alpha: 0.15)
+                        : AppColors.surfaceLight.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected ? AppColors.gold : Colors.transparent,
+                    ),
+                  ),
+                  child: Text(
+                    'Page $p',
                     style: TextStyle(
                       color: selected
                           ? AppColors.gold

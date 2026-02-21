@@ -9,6 +9,7 @@ import '../models/user_profile.dart';
 import '../providers/app_providers.dart';
 import '../services/prayer_times_service.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/quran_log_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -812,7 +813,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     UserProfile profile,
   ) {
     final pagesRead = record.quranPagesRead;
-    final lastPage = record.quranLastPage ?? 0;
+    int currentCompletedPage =
+        record.quranLastPage ?? ((profile.quranStartPage ?? 1) - 1);
+    final baseCompletedPage = currentCompletedPage - pagesRead;
     final goal = profile.quranDailyGoal;
     final progress = goal > 0 ? (pagesRead / goal).clamp(0.0, 1.0) : 0.0;
 
@@ -886,313 +889,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
           // ── Bookmark chip + Log button ──
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // ── Left: Up Next (Clickable to open sheet) ──
               Expanded(
                 child: GestureDetector(
-                  onTap: () => _showQuranLogSheet(context, record, profile),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLight.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.bookmark_rounded,
-                          size: 18,
-                          color: lastPage > 0
-                              ? AppColors.gold
-                              : AppColors.textDim,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                lastPage > 0
-                                    ? 'Continue from'
-                                    : 'No bookmark yet',
-                                style: TextStyle(
-                                  color: AppColors.textDim,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              if (lastPage > 0)
-                                Text(
-                                  'Page $lastPage',
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: () => _showQuranLogSheet(context, record, profile),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.goldGradient,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.edit_note_rounded,
-                        size: 18,
-                        color: AppColors.backgroundPrimary,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Log',
-                        style: TextStyle(
-                          color: AppColors.backgroundPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Bottom sheet for logging Quran reading ──
-
-  void _showQuranLogSheet(
-    BuildContext context,
-    DailyRecord record,
-    UserProfile profile,
-  ) {
-    int tempPages = record.quranPagesRead;
-    int startPage = record.quranLastPage ?? 0;
-    final goal = profile.quranDailyGoal;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          final stoppedAt = startPage > 0 ? startPage + tempPages : 0;
-
-          return Container(
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 24,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
-            ),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle bar
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Row(
-                  children: [
-                    Icon(Icons.menu_book, color: AppColors.gold, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Log Quran Reading',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // ── Starting page ──
-                GestureDetector(
-                  onTap: () {
-                    _showPageNumberDialog(ctx, startPage, (p) {
-                      setSheetState(() => startPage = p);
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundPrimary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.bookmark_rounded,
-                          size: 18,
-                          color: startPage > 0
-                              ? AppColors.gold
-                              : AppColors.textDim,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Started from page',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                startPage > 0
-                                    ? 'Tap to change'
-                                    : 'Tap to set your starting page',
-                                style: TextStyle(
-                                  color: AppColors.textDim,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            startPage > 0 ? '$startPage' : '—',
-                            style: const TextStyle(
-                              color: AppColors.gold,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // ── Pages read today ──
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundPrimary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  onTap: () => showQuranLogSheet(context, ref, record, profile),
+                  behavior: HitTestBehavior.opaque,
                   child: Row(
                     children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          size: 18,
+                          color: AppColors.gold,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Pages read today',
+                              'Up next',
                               style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                                color: AppColors.textDim,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Goal: $goal pages',
-                              style: TextStyle(
-                                color: AppColors.textDim,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                if (tempPages > 0) {
-                                  setSheetState(() => tempPages--);
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.remove_rounded,
-                                  size: 18,
-                                  color: tempPages > 0
-                                      ? AppColors.textSecondary
-                                      : AppColors.textDim.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                ),
-                              ),
-                            ),
-                            Container(
-                              constraints: const BoxConstraints(minWidth: 44),
-                              alignment: Alignment.center,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 6,
-                              ),
-                              child: Text(
-                                '$tempPages',
-                                style: const TextStyle(
-                                  color: AppColors.gold,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => setSheetState(() => tempPages++),
-                              child: const Padding(
-                                padding: EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.add_rounded,
-                                  size: 18,
-                                  color: AppColors.gold,
-                                ),
+                              'Page ${currentCompletedPage + 1}',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -1201,153 +938,98 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+              ),
 
-                // ── Auto-calculated "now on page" ──
-                if (startPage > 0 && tempPages > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.15),
+              const SizedBox(width: 12),
+
+              // ── Right: Interactive Quick Logger ──
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.surfaceLight.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        if (currentCompletedPage > baseCompletedPage) {
+                          ref
+                              .read(dailyRecordProvider.notifier)
+                              .setQuranPages(pagesRead - 1);
+                          ref
+                              .read(dailyRecordProvider.notifier)
+                              .setQuranLastPage(currentCompletedPage - 1);
+                        }
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        child: Icon(
+                          Icons.remove_rounded,
+                          size: 20,
+                          color: currentCompletedPage > baseCompletedPage
+                              ? AppColors.gold
+                              : AppColors.textDim.withValues(alpha: 0.3),
+                        ),
                       ),
                     ),
-                    child: Row(
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 16,
-                          color: AppColors.gold,
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Now on page',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const Spacer(),
                         Text(
-                          '$stoppedAt',
+                          '$currentCompletedPage',
                           style: const TextStyle(
                             color: AppColors.gold,
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
+                            height: 1.1,
+                          ),
+                        ),
+                        const Text(
+                          'Completed',
+                          style: TextStyle(
+                            color: AppColors.textDim,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                if (startPage > 0 && tempPages > 0) const SizedBox(height: 12),
-
-                const SizedBox(height: 16),
-
-                // ── Save button ──
-                SizedBox(
-                  width: double.infinity,
-                  child: GestureDetector(
-                    onTap: () {
-                      ref
-                          .read(dailyRecordProvider.notifier)
-                          .setQuranPages(tempPages);
-                      // Update bookmark to where they stopped
-                      if (startPage > 0 && tempPages > 0) {
-                        ref
-                            .read(dailyRecordProvider.notifier)
-                            .setQuranLastPage(stoppedAt);
-                      } else if (startPage > 0) {
-                        // Keep the existing bookmark if no pages read
-                        ref
-                            .read(dailyRecordProvider.notifier)
-                            .setQuranLastPage(startPage);
-                      }
-                      Navigator.pop(ctx);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.goldGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Save',
-                          style: TextStyle(
-                            color: AppColors.backgroundPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                    GestureDetector(
+                      onTap: () {
+                        if (currentCompletedPage < 604) {
+                          ref
+                              .read(dailyRecordProvider.notifier)
+                              .setQuranPages(pagesRead + 1);
+                          ref
+                              .read(dailyRecordProvider.notifier)
+                              .setQuranLastPage(currentCompletedPage + 1);
+                        }
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 20,
+                          color: AppColors.gold,
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showPageNumberDialog(
-    BuildContext context,
-    int currentPage,
-    ValueChanged<int> onSet,
-  ) {
-    final controller = TextEditingController(
-      text: currentPage > 0 ? '$currentPage' : '',
-    );
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Go to page',
-          style: TextStyle(color: AppColors.gold, fontSize: 18),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 22),
-          decoration: InputDecoration(
-            hintText: '1 – 604',
-            hintStyle: TextStyle(color: AppColors.textDim),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: AppColors.gold.withValues(alpha: 0.3),
               ),
-            ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.gold),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textDim),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              final page = int.tryParse(controller.text);
-              if (page != null && page >= 1 && page <= 604) {
-                onSet(page);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Set', style: TextStyle(color: AppColors.gold)),
+            ],
           ),
         ],
       ),

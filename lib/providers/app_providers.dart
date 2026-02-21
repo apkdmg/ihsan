@@ -45,6 +45,7 @@ class UserProfileNotifier extends Notifier<UserProfile> {
     required String zoneCode,
     required String zoneName,
     required int quranGoal,
+    required int quranStartPage,
     double? lat,
     double? lng,
   }) async {
@@ -53,6 +54,7 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       zoneCode: zoneCode,
       zoneName: zoneName,
       quranDailyGoal: quranGoal,
+      quranStartPage: quranStartPage,
       onboardingComplete: true,
       latitude: lat,
       longitude: lng,
@@ -72,7 +74,11 @@ final recordForDateProvider = FutureProvider.family<DailyRecord, String>((
   dateKey,
 ) async {
   final notifier = ref.read(dailyRecordProvider.notifier);
-  return notifier.getOrCreate(dateKey);
+  final profile = ref.read(userProfileProvider);
+  return notifier.getOrCreate(
+    dateKey,
+    defaultQuranStartPage: profile.quranStartPage ?? 1,
+  );
 });
 
 /// Provides an existing record for a date key without creating one.
@@ -102,14 +108,47 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
 
   Future<void> _init() async {
     await _ensureInitialized();
-    state = await getOrCreate(_todayKey);
+    // Use the default from the box if possible (we don't have ref here easily, but we know _box)
+    // The safest way is to let `loadToday` handle it later, but we need an initial state.
+    // We'll pass 1 for now, but UI will re-load with `recordForDateProvider` if needed,
+    // or we can just fetch the profile box.
+    final profileBox = Hive.box<UserProfile>('user_profile');
+    final startPage = profileBox.get('profile')?.quranStartPage ?? 1;
+    state = await getOrCreate(_todayKey, defaultQuranStartPage: startPage);
   }
 
-  Future<DailyRecord> getOrCreate(String dateKey) async {
+  Future<DailyRecord> getOrCreate(
+    String dateKey, {
+    int defaultQuranStartPage = 1,
+  }) async {
     await _ensureInitialized();
     var record = _box?.get(dateKey);
     if (record == null) {
-      record = DailyRecord(dateKey: dateKey);
+      int? lastPage;
+      if (_box != null) {
+        final previousRecords = _box!.values
+            .where((r) => r.dateKey.compareTo(dateKey) < 0)
+            .toList();
+        if (previousRecords.isNotEmpty) {
+          // Sort descending to check the most recent first
+          previousRecords.sort((a, b) => b.dateKey.compareTo(a.dateKey));
+          for (final prevRecord in previousRecords) {
+            if (prevRecord.quranLastPage != null &&
+                prevRecord.quranLastPage! > 0) {
+              lastPage = prevRecord.quranLastPage;
+              break;
+            }
+          }
+        }
+      }
+
+      // Carry forward the bookmark. If no previous record has a valid bookmark, use UserProfile offset.
+      // Since quranLastPage represents the last COMPLETED page, we subtract 1 from the start page.
+      final startPageToUse =
+          lastPage ??
+          (defaultQuranStartPage > 0 ? defaultQuranStartPage - 1 : 0);
+
+      record = DailyRecord(dateKey: dateKey, quranLastPage: startPageToUse);
       await _box?.put(dateKey, record);
     }
     return record;
@@ -120,12 +159,15 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
     return _box?.get(dateKey);
   }
 
-  Future<void> loadDate(String dateKey) async {
-    state = await getOrCreate(dateKey);
+  Future<void> loadDate(String dateKey, {int defaultQuranStartPage = 1}) async {
+    state = await getOrCreate(
+      dateKey,
+      defaultQuranStartPage: defaultQuranStartPage,
+    );
   }
 
-  Future<void> loadToday() async {
-    await loadDate(_todayKey);
+  Future<void> loadToday({int defaultQuranStartPage = 1}) async {
+    await loadDate(_todayKey, defaultQuranStartPage: defaultQuranStartPage);
   }
 
   Future<void> _save() async {
@@ -218,6 +260,13 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
   Future<void> incrementZikr(String type) async {
     final counts = Map<String, int>.from(state.zikrCounts);
     counts[type] = (counts[type] ?? 0) + 1;
+    state = _copyWith(zikrCounts: counts);
+    await _save();
+  }
+
+  Future<void> setZikrCount(String type, int count) async {
+    final counts = Map<String, int>.from(state.zikrCounts);
+    counts[type] = count;
     state = _copyWith(zikrCounts: counts);
     await _save();
   }

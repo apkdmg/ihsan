@@ -13,42 +13,39 @@ class DailyRecordAdapter extends TypeAdapter<DailyRecord> {
   @override
   DailyRecord read(BinaryReader reader) {
     final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{};
-    for (int i = 0; i < numOfFields; i++) {
-      final key = reader.readByte();
-      final value = reader.read();
-      fields[key] = value;
-    }
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
     return DailyRecord(
       dateKey: fields[0] as String,
       prayerStatuses: (fields[1] as Map?)?.cast<String, int>(),
-      quranPagesRead: fields[2] as int? ?? 0,
-      quranLastPage: fields[28] as int? ?? 0,
-      quranJuzCompleted: fields[3] as int? ?? 0,
-      listenedToRecitation: fields[4] as bool? ?? false,
-      versesMemorized: fields[5] as int? ?? 0,
-      readTafsir: fields[6] as bool? ?? false,
+      quranPagesRead: fields[2] as int,
+      quranLastPage: fields[28] as int?,
+      quranJuzCompleted: fields[3] as int,
+      listenedToRecitation: fields[4] as bool,
+      versesMemorized: fields[5] as int,
+      readTafsir: fields[6] as bool,
       zikrCounts: (fields[7] as Map?)?.cast<String, int>(),
-      morningAdhkar: fields[8] as bool? ?? false,
-      eveningAdhkar: fields[9] as bool? ?? false,
-      personalDua: fields[10] as bool? ?? false,
-      duaBeforeAfterEating: fields[11] as bool? ?? false,
-      fastingCompleted: fields[12] as bool? ?? false,
-      ateSuhoor: fields[13] as bool? ?? false,
-      brokeWithDates: fields[14] as bool? ?? false,
-      avoidedGossip: fields[15] as bool? ?? false,
-      controlledAnger: fields[16] as bool? ?? false,
-      loweredGaze: fields[17] as bool? ?? false,
+      morningAdhkar: fields[8] as bool,
+      eveningAdhkar: fields[9] as bool,
+      personalDua: fields[10] as bool,
+      duaBeforeAfterEating: fields[11] as bool,
+      fastingCompleted: fields[12] as bool,
+      ateSuhoor: fields[13] as bool,
+      brokeWithDates: fields[14] as bool,
+      avoidedGossip: fields[15] as bool,
+      controlledAnger: fields[16] as bool,
+      loweredGaze: fields[17] as bool,
       goodDeeds: (fields[18] as List?)?.cast<String>(),
       reflectionNote: fields[19] as String?,
-      khushuRating: fields[20] as int? ?? 0,
+      khushuRating: fields[20] as int,
       gratitudeNote: fields[21] as String?,
       bestDeedNote: fields[22] as String?,
       improvementNote: fields[23] as String?,
       charityAmount: fields[24] as double?,
-      attendedLecture: fields[25] as bool? ?? false,
-      readIslamicBook: fields[26] as bool? ?? false,
-      sharedKnowledge: fields[27] as bool? ?? false,
+      attendedLecture: fields[25] as bool,
+      readIslamicBook: fields[26] as bool,
+      sharedKnowledge: fields[27] as bool,
     );
   }
 

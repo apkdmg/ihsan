@@ -13,30 +13,28 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
   @override
   UserProfile read(BinaryReader reader) {
     final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{};
-    for (int i = 0; i < numOfFields; i++) {
-      final key = reader.readByte();
-      final value = reader.read();
-      fields[key] = value;
-    }
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
     return UserProfile(
-      name: fields[0] as String? ?? '',
-      zoneCode: fields[1] as String? ?? 'WLY01',
-      zoneName: fields[2] as String? ?? 'Kuala Lumpur',
-      quranDailyGoal: fields[3] as int? ?? 20,
-      ramadanStartDate: fields[4] as String? ?? '',
-      currentStreak: fields[5] as int? ?? 0,
-      longestStreak: fields[6] as int? ?? 0,
-      onboardingComplete: fields[7] as bool? ?? false,
+      name: fields[0] as String,
+      zoneCode: fields[1] as String,
+      zoneName: fields[2] as String,
+      quranDailyGoal: fields[3] as int,
+      ramadanStartDate: fields[4] as String,
+      currentStreak: fields[5] as int,
+      longestStreak: fields[6] as int,
+      onboardingComplete: fields[7] as bool,
       latitude: fields[8] as double?,
       longitude: fields[9] as double?,
+      quranStartPage: fields[10] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserProfile obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -56,7 +54,9 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(8)
       ..write(obj.latitude)
       ..writeByte(9)
-      ..write(obj.longitude);
+      ..write(obj.longitude)
+      ..writeByte(10)
+      ..write(obj.quranStartPage);
   }
 
   @override
