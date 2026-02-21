@@ -106,6 +106,9 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
     return DateFormat('yyyy-MM-dd').format(now);
   }
 
+  /// Public accessor for the stable current Islamic day key.
+  String getTodayKey() => _todayKey;
+
   static bool _isSameCalendarDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -279,14 +282,33 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
   }
 
   // ── Quran ──
-  Future<void> setQuranPages(int pages) async {
-    state = _copyWith(quranPagesRead: pages);
-    await _save();
-  }
+  Future<void> updateQuranLog(int pagesRead, int targetCompletedPage) async {
+    final oldLastPage = state.quranLastPage ?? 0;
+    final pageDifference = targetCompletedPage - oldLastPage;
 
-  Future<void> setQuranLastPage(int page) async {
-    state = _copyWith(quranLastPage: page);
+    // Update current record
+    state = _copyWith(
+      quranPagesRead: pagesRead,
+      quranLastPage: targetCompletedPage,
+    );
     await _save();
+
+    // If there's a difference, ripple it forward to existing future records
+    if (pageDifference != 0 && _box != null) {
+      final futureRecords = _box!.values
+          .where((r) => r.dateKey.compareTo(state.dateKey) > 0)
+          .toList();
+
+      for (final record in futureRecords) {
+        final currentLastPage = record.quranLastPage ?? 0;
+        record.quranLastPage = currentLastPage + pageDifference;
+        await _box!.put(record.dateKey, record);
+      }
+      
+      // If we are currently on a past day but "today" is cached in another provider instance
+      // or if we just want to ensure global state is tight, this local hive update is enough
+      // because the next time "Today" is loaded from hive, it will have the new quranLastPage.
+    }
   }
 
   // ── Zikr ──

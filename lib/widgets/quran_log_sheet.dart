@@ -219,11 +219,7 @@ void showQuranLogSheet(
                     if (targetCompletedPage > 0 || pagesReadToday > 0) {
                       ref
                           .read(dailyRecordProvider.notifier)
-                          .setQuranPages(pagesReadToday);
-
-                      ref
-                          .read(dailyRecordProvider.notifier)
-                          .setQuranLastPage(targetCompletedPage);
+                          .updateQuranLog(pagesReadToday, targetCompletedPage);
                     }
                     Navigator.pop(ctx);
                   },

@@ -22,7 +22,8 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
 
   /// Islamic "today" — aligned with the provider's Maghrib-aware key.
   DateTime get _today {
-    final key = ref.read(dailyRecordProvider).dateKey;
+    final notifier = ref.read(dailyRecordProvider.notifier);
+    final key = notifier.getTodayKey();
     try {
       return DateUtils.dateOnly(DateTime.parse(key));
     } catch (_) {

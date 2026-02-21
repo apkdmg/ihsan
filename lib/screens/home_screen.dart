@@ -1079,10 +1079,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         if (currentCompletedPage > baseCompletedPage) {
                           ref
                               .read(dailyRecordProvider.notifier)
-                              .setQuranPages(pagesRead - 1);
-                          ref
-                              .read(dailyRecordProvider.notifier)
-                              .setQuranLastPage(currentCompletedPage - 1);
+                              .updateQuranLog(pagesRead - 1, currentCompletedPage - 1);
                         }
                       },
                       behavior: HitTestBehavior.opaque,
@@ -1127,10 +1124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         if (currentCompletedPage < 604) {
                           ref
                               .read(dailyRecordProvider.notifier)
-                              .setQuranPages(pagesRead + 1);
-                          ref
-                              .read(dailyRecordProvider.notifier)
-                              .setQuranLastPage(currentCompletedPage + 1);
+                              .updateQuranLog(pagesRead + 1, currentCompletedPage + 1);
                         }
                       },
                       behavior: HitTestBehavior.opaque,
