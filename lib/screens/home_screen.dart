@@ -20,12 +20,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late Timer _countdownTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {}); // Refresh countdown display
     });
@@ -33,8 +34,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownTimer.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(dailyRecordProvider.notifier).reloadIfDayChanged();
+    }
   }
 
   @override
@@ -47,6 +56,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Derive Ramadan state from the Hijri date in prayer times (Maghrib-aware)
     final isRamadan = prayerTimes?.isRamadan ?? false;
     final dayOfRamadan = prayerTimes?.ramadanDay ?? 1;
+
+    // Feed Maghrib time to the daily record provider for Islamic day boundary
+    if (prayerTimes != null) {
+      ref.read(dailyRecordProvider.notifier).updateMaghribTime(prayerTimes.maghrib);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,

@@ -91,8 +91,41 @@ final existingRecordForDateProvider =
 class DailyRecordNotifier extends Notifier<DailyRecord> {
   Box<DailyRecord>? _box;
   bool _initialized = false;
+  DateTime? _lastKnownMaghrib;
 
-  String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+  /// The Islamic "today" key. After Maghrib, returns tomorrow's Gregorian date.
+  /// Falls back to system date if prayer times are unavailable.
+  String get _todayKey {
+    final now = DateTime.now();
+    final maghrib = _lastKnownMaghrib;
+    if (maghrib != null &&
+        _isSameCalendarDay(now, maghrib) &&
+        now.isAfter(maghrib)) {
+      return DateFormat('yyyy-MM-dd').format(now.add(const Duration(days: 1)));
+    }
+    return DateFormat('yyyy-MM-dd').format(now);
+  }
+
+  static bool _isSameCalendarDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// Called by the UI when prayer times are available.
+  void updateMaghribTime(DateTime maghrib) {
+    _lastKnownMaghrib = maghrib;
+    // Always check — catches real-time Maghrib crossing while app is in use.
+    // reloadIfDayChanged() is a cheap string comparison, no-op when day hasn't changed.
+    reloadIfDayChanged();
+  }
+
+  /// Reloads state if the Islamic day has changed (e.g. Maghrib passed, app resumed).
+  Future<void> reloadIfDayChanged() async {
+    final currentKey = _todayKey;
+    if (state.dateKey != currentKey) {
+      final profileBox = Hive.box<UserProfile>('user_profile');
+      final startPage = profileBox.get('profile')?.quranStartPage ?? 1;
+      state = await getOrCreate(currentKey, defaultQuranStartPage: startPage);
+    }
+  }
 
   @override
   DailyRecord build() {
@@ -362,9 +395,9 @@ class DailyRecordNotifier extends Notifier<DailyRecord> {
   // ── History ──
   List<DailyRecord> getRecordsForRange(int days) {
     final records = <DailyRecord>[];
-    final now = DateTime.now();
+    final todayDate = DateFormat('yyyy-MM-dd').parse(_todayKey);
     for (int i = 0; i < days; i++) {
-      final date = now.subtract(Duration(days: i));
+      final date = todayDate.subtract(Duration(days: i));
       final key = DateFormat('yyyy-MM-dd').format(date);
       final record = _box?.get(key);
       if (record != null) {

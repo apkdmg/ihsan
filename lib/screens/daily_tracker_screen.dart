@@ -20,7 +20,15 @@ class _DailyTrackerScreenState extends ConsumerState<DailyTrackerScreen> {
   late DateTime _selectedDate;
   bool _isLoadingDate = true;
 
-  DateTime get _today => DateUtils.dateOnly(DateTime.now());
+  /// Islamic "today" — aligned with the provider's Maghrib-aware key.
+  DateTime get _today {
+    final key = ref.read(dailyRecordProvider).dateKey;
+    try {
+      return DateUtils.dateOnly(DateTime.parse(key));
+    } catch (_) {
+      return DateUtils.dateOnly(DateTime.now());
+    }
+  }
   bool get _isTodaySelected => DateUtils.isSameDay(_selectedDate, _today);
 
   @override
