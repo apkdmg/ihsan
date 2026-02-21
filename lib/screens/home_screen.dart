@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/islamic_data.dart';
 import '../models/daily_record.dart';
@@ -10,7 +9,6 @@ import '../models/user_profile.dart';
 import '../providers/app_providers.dart';
 import '../services/prayer_times_service.dart';
 import '../widgets/common_widgets.dart';
-import 'daily_tracker_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -43,24 +41,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final profile = ref.watch(userProfileProvider);
     final prayerTimesAsync = ref.watch(prayerTimesProvider);
     final prayerTimes = prayerTimesAsync.whenOrNull(data: (d) => d);
-    final yesterday = DateUtils.dateOnly(
-      DateTime.now().subtract(const Duration(days: 1)),
-    );
-    final yesterdayKey = DateFormat('yyyy-MM-dd').format(yesterday);
-    final yesterdayRecordAsync = ref.watch(
-      existingRecordForDateProvider(yesterdayKey),
-    );
 
     // Derive Ramadan state from the Hijri date in prayer times (Maghrib-aware)
     final isRamadan = prayerTimes?.isRamadan ?? false;
     final dayOfRamadan = prayerTimes?.ramadanDay ?? 1;
-    final yesterdayRecord = yesterdayRecordAsync.whenOrNull(
-      data: (record) => record,
-    );
-    final showYesterdayNudge =
-        isRamadan &&
-        yesterdayRecordAsync.hasValue &&
-        (yesterdayRecord == null || yesterdayRecord.dailyScore <= 0);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,
@@ -89,10 +73,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ] else ...[
             // Ramadan is active — show full tracker
-            if (showYesterdayNudge)
-              SliverToBoxAdapter(
-                child: _buildMissedYesterdayCard(context, yesterday),
-              ),
             SliverToBoxAdapter(child: _buildPrayerRow(context, record)),
             SliverToBoxAdapter(
               child: _buildFastingCard(context, prayerTimesAsync),
@@ -396,67 +376,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return 'Start your day with Bismillah ☀️';
   }
 
-  Widget _buildMissedYesterdayCard(BuildContext context, DateTime yesterday) {
-    final label = DateFormat('EEE, d MMM').format(yesterday);
-
-    return GlassCard(
-      borderColor: AppColors.gold.withValues(alpha: 0.2),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.history_edu_rounded,
-              color: AppColors.gold,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'You missed $label',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Complete yesterday now',
-                  style: TextStyle(color: AppColors.textDim, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => DailyTrackerScreen(initialDate: yesterday),
-                ),
-              );
-            },
-            child: const Text(
-              'Log',
-              style: TextStyle(
-                color: AppColors.gold,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── NEW: Prayer Times Card (from API) ──
   Widget _buildPrayerTimesCard(
     BuildContext context,
@@ -490,7 +409,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
         ),
       ),
-      error: (_, _) => GlassCard(
+      error: (_, __) => GlassCard(
         child: Row(
           children: [
             const Icon(Icons.wifi_off, color: AppColors.error, size: 20),
