@@ -1,6 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../core/utils/arabic_text_helper.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/app_providers.dart';
 
@@ -83,7 +86,9 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
 
     _completionController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000), // Extended for a majestic feel
+      duration: const Duration(
+        milliseconds: 2000,
+      ), // Extended for a majestic feel
     );
 
     _levitationAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
@@ -114,15 +119,13 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
       ),
     );
 
-    _bottomTextSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _completionController,
-        curve: const Interval(0.4, 0.8, curve: Curves.easeOutBack),
-      ),
-    );
+    _bottomTextSlideAnimation =
+        Tween<Offset>(begin: const Offset(0, 1.5), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _completionController,
+            curve: const Interval(0.4, 0.8, curve: Curves.easeOutBack),
+          ),
+        );
 
     _bottomTextOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -168,7 +171,8 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
     if (isTargetReached) {
       _completionController.forward(from: 0.0);
       if (_currentModeIndex < _modes.length - 1) {
-        Future.delayed(const Duration(milliseconds: 2500), () { // Wait 2.5s to savor the sequence
+        Future.delayed(const Duration(milliseconds: 2500), () {
+          // Wait 2.5s to savor the sequence
           if (mounted) {
             setState(() {
               _currentModeIndex++;
@@ -296,11 +300,17 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                 onTap: isComplete ? null : _onTap,
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedBuilder(
-                  animation: Listenable.merge([_pulseAnimation, _completionController]),
+                  animation: Listenable.merge([
+                    _pulseAnimation,
+                    _completionController,
+                  ]),
                   builder: (context, child) {
-                    final isNovaActive = _completionController.isAnimating || isComplete;
+                    final isNovaActive =
+                        _completionController.isAnimating || isComplete;
                     return Transform.scale(
-                      scale: _pulseAnimation.value * (isNovaActive ? _levitationAnimation.value : 1.0),
+                      scale:
+                          _pulseAnimation.value *
+                          (isNovaActive ? _levitationAnimation.value : 1.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -308,8 +318,9 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                           ShaderMask(
                             shaderCallback: (bounds) {
                               if (!isNovaActive) {
-                                return const LinearGradient(colors: [Colors.white, Colors.white])
-                                    .createShader(bounds);
+                                return const LinearGradient(
+                                  colors: [Colors.white, Colors.white],
+                                ).createShader(bounds);
                               }
                               return LinearGradient(
                                 colors: [
@@ -318,23 +329,43 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                                   AppColors.goldLight,
                                 ],
                                 stops: const [0.0, 0.5, 1.0],
-                                begin: Alignment(_textSweepAnimation.value - 1, 0),
-                                end: Alignment(_textSweepAnimation.value + 1, 0),
+                                begin: Alignment(
+                                  _textSweepAnimation.value - 1,
+                                  0,
+                                ),
+                                end: Alignment(
+                                  _textSweepAnimation.value + 1,
+                                  0,
+                                ),
                               ).createShader(bounds);
                             },
                             child: Text(
-                              mode.arabic,
+                              ArabicTextHelper.reshape(mode.arabic),
                               style: TextStyle(
-                                fontFamily: 'serif',
-                                fontSize: 36,
+                                fontFamily: 'KFGQPC Uthman Taha Naskh',
+                                fontFamilyFallback: const [
+                                  'Courier',
+                                  'monospace',
+                                ],
+                                fontFeatures: const [
+                                  FontFeature.enable('liga'),
+                                  FontFeature.enable('rlig'),
+                                  FontFeature.enable('calt'),
+                                  FontFeature.enable('ccmp'),
+                                ],
+                                fontSize: 42,
                                 color: isComplete
-                                    ? Colors.white // Base color for mask
+                                    ? Colors
+                                          .white // Base color for mask
                                     : AppColors.goldLight,
                                 height: 1.5,
                                 shadows: [
                                   Shadow(
-                                    color: (isComplete ? AppColors.gold : Colors.transparent)
-                                        .withValues(alpha: 0.5),
+                                    color:
+                                        (isComplete
+                                                ? AppColors.gold
+                                                : Colors.transparent)
+                                            .withValues(alpha: 0.5),
                                     blurRadius: 20,
                                   ),
                                 ],
@@ -344,9 +375,8 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                           const SizedBox(height: 8),
                           Text(
                             mode.meaning,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 48),
 
@@ -358,9 +388,11 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                               if (isNovaActive)
                                 ...List.generate(2, (index) {
                                   final delay = index * 0.15;
-                                  final rawOpacity = _novaOpacityAnimation.value - delay;
+                                  final rawOpacity =
+                                      _novaOpacityAnimation.value - delay;
                                   final opacity = rawOpacity.clamp(0.0, 1.0);
-                                  final scale = _novaScaleAnimation.value - (index * 0.2);
+                                  final scale =
+                                      _novaScaleAnimation.value - (index * 0.2);
 
                                   return opacity > 0
                                       ? Transform.scale(
@@ -372,8 +404,12 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                                               shape: BoxShape.circle,
                                               gradient: RadialGradient(
                                                 colors: [
-                                                  AppColors.gold.withValues(alpha: opacity * 0.6),
-                                                  AppColors.gold.withValues(alpha: opacity * 0.1),
+                                                  AppColors.gold.withValues(
+                                                    alpha: opacity * 0.6,
+                                                  ),
+                                                  AppColors.gold.withValues(
+                                                    alpha: opacity * 0.1,
+                                                  ),
                                                   Colors.transparent,
                                                 ],
                                                 stops: const [0.2, 0.7, 1.0],
@@ -383,7 +419,7 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                                         )
                                       : const SizedBox();
                                 }),
-                              
+
                               // The actual ring
                               SizedBox(
                                 width: 180,
@@ -393,7 +429,9 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                                   strokeWidth: 6,
                                   backgroundColor: Colors.transparent,
                                   valueColor: AlwaysStoppedAnimation(
-                                    AppColors.surfaceLight.withValues(alpha: 0.2),
+                                    AppColors.surfaceLight.withValues(
+                                      alpha: 0.2,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -432,9 +470,10 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                                       shadows: isComplete
                                           ? [
                                               Shadow(
-                                                color: AppColors.gold.withValues(alpha: 0.5),
+                                                color: AppColors.gold
+                                                    .withValues(alpha: 0.5),
                                                 blurRadius: 12,
-                                              )
+                                              ),
                                             ]
                                           : null,
                                       fontFeatures: const [
@@ -446,7 +485,11 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                                     '/ ${mode.target}',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      color: isComplete ? AppColors.gold.withValues(alpha: 0.7) : AppColors.textDim,
+                                      color: isComplete
+                                          ? AppColors.gold.withValues(
+                                              alpha: 0.7,
+                                            )
+                                          : AppColors.textDim,
                                     ),
                                   ),
                                 ],
@@ -457,7 +500,8 @@ class _ZikrCounterScreenState extends ConsumerState<ZikrCounterScreen>
                           if (!isComplete)
                             Text(
                               'Tap anywhere to count',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textDim),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textDim),
                             )
                           else
                             FadeTransition(

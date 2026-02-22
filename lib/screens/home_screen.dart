@@ -1,9 +1,11 @@
 import 'dart:async';
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/islamic_data.dart';
+import '../core/utils/arabic_text_helper.dart';
 import '../models/daily_record.dart';
 import '../models/user_profile.dart';
 import '../providers/app_providers.dart';
@@ -59,7 +61,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // Feed Maghrib time to the daily record provider for Islamic day boundary
     if (prayerTimes != null) {
-      ref.read(dailyRecordProvider.notifier).updateMaghribTime(prayerTimes.maghrib);
+      ref
+          .read(dailyRecordProvider.notifier)
+          .updateMaghribTime(prayerTimes.maghrib);
     }
 
     return Scaffold(
@@ -318,10 +322,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'إحسان',
+                      ArabicTextHelper.reshape('إحسان'),
                       style: TextStyle(
-                        fontFamily: 'serif',
-                        fontSize: 28,
+                        fontFamily: 'KFGQPC Uthman Taha Naskh',
+                        fontFamilyFallback: const ['Courier', 'monospace'],
+                        fontFeatures: const [
+                          FontFeature.enable('liga'),
+                          FontFeature.enable('rlig'),
+                          FontFeature.enable('calt'),
+                          FontFeature.enable('ccmp'),
+                        ],
+                        fontSize: 34,
                         fontWeight: FontWeight.w700,
                         color: AppColors.gold,
                         shadows: [
@@ -782,11 +793,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: AppColors.backgroundPrimary,
-                size: 24,
-              ),
+              child: Icon(icon, color: AppColors.backgroundPrimary, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -796,14 +803,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ),
@@ -1079,7 +1083,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         if (currentCompletedPage > baseCompletedPage) {
                           ref
                               .read(dailyRecordProvider.notifier)
-                              .updateQuranLog(pagesRead - 1, currentCompletedPage - 1);
+                              .updateQuranLog(
+                                pagesRead - 1,
+                                currentCompletedPage - 1,
+                              );
                         }
                       },
                       behavior: HitTestBehavior.opaque,
@@ -1124,7 +1131,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         if (currentCompletedPage < 604) {
                           ref
                               .read(dailyRecordProvider.notifier)
-                              .updateQuranLog(pagesRead + 1, currentCompletedPage + 1);
+                              .updateQuranLog(
+                                pagesRead + 1,
+                                currentCompletedPage + 1,
+                              );
                         }
                       },
                       behavior: HitTestBehavior.opaque,
@@ -1159,11 +1169,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: Column(
         children: [
           Text(
-            verse['arabic']!,
+            ArabicTextHelper.reshape(verse['arabic']!),
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontFamily: 'serif',
-              fontSize: 20,
+              fontFamily: 'KFGQPC Uthman Taha Naskh',
+              fontFamilyFallback: ['Courier', 'monospace'],
+              fontFeatures: [
+                FontFeature.enable('liga'),
+                FontFeature.enable('rlig'),
+                FontFeature.enable('calt'),
+                FontFeature.enable('ccmp'),
+              ],
+              fontSize: 26,
               color: AppColors.goldLight,
               height: 2.0,
             ),

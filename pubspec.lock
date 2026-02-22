@@ -209,6 +209,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.6"
+  dartarabic:
+    dependency: "direct main"
+    description:
+      name: dartarabic
+      sha256: "69728e84531daea5a1545e3e70dd544e3bf6d3300eb652ee5d83e626e27145d6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.1"
   dbus:
     dependency: transitive
     description:
@@ -877,6 +885,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  string_validator:
+    dependency: transitive
+    description:
+      name: string_validator
+      sha256: "240f4c98027dfbe8639c8271ef18cc9de735b47067aa15a720cfed9576a512b1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   term_glyph:
     dependency: transitive
     description:

@@ -1,6 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:waktu_solat_lib/waktu_solat_lib.dart' as waktu_solat;
+import '../core/utils/arabic_text_helper.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/app_providers.dart';
 
@@ -166,10 +169,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 32),
           Text(
-            'إحسان',
+            ArabicTextHelper.reshape('إحسان'),
             style: TextStyle(
-              fontFamily: 'serif',
-              fontSize: 48,
+              fontFamily: 'KFGQPC Uthman Taha Naskh',
+              fontFamilyFallback: const ['Courier', 'monospace'],
+              fontFeatures: const [
+                FontFeature.enable('liga'),
+                FontFeature.enable('rlig'),
+                FontFeature.enable('calt'),
+                FontFeature.enable('ccmp'),
+              ],
+              fontSize: 54,
               fontWeight: FontWeight.w700,
               color: AppColors.gold,
               shadows: [

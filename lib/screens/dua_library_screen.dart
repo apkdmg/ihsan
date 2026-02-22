@@ -1,6 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/islamic_data.dart';
+import '../core/utils/arabic_text_helper.dart';
 import '../widgets/common_widgets.dart';
 
 class DuaLibraryScreen extends StatelessWidget {
@@ -66,12 +69,19 @@ class _DuaCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              dua['arabic']!,
+              ArabicTextHelper.reshape(dua['arabic']!),
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
               style: const TextStyle(
-                fontFamily: 'serif',
-                fontSize: 22,
+                fontFamily: 'KFGQPC Uthman Taha Naskh',
+                fontFamilyFallback: ['Courier', 'monospace'],
+                fontFeatures: [
+                  FontFeature.enable('liga'),
+                  FontFeature.enable('rlig'),
+                  FontFeature.enable('calt'),
+                  FontFeature.enable('ccmp'),
+                ],
+                fontSize: 28,
                 color: AppColors.goldLight,
                 height: 2.0,
               ),

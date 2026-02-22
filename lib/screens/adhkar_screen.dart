@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/adhkar_data.dart';
+import '../core/utils/arabic_text_helper.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
@@ -10,11 +11,11 @@ import '../widgets/common_widgets.dart';
 class TextScaleNotifier extends Notifier<double> {
   @override
   double build() => 1.0;
-  
+
   void increase() {
     if (state < 2.0) state += 0.2;
   }
-  
+
   void decrease() {
     if (state > 0.8) state -= 0.2;
   }
@@ -104,10 +105,14 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               child: ElevatedButton(
                 onPressed: () {
-                  ref.read(dailyRecordProvider.notifier).setAdhkarComplete(widget.isMorning, true);
+                  ref
+                      .read(dailyRecordProvider.notifier)
+                      .setAdhkarComplete(widget.isMorning, true);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${widget.isMorning ? "Morning" : "Evening"} Adhkar marked as complete!'),
+                      content: Text(
+                        '${widget.isMorning ? "Morning" : "Evening"} Adhkar marked as complete!',
+                      ),
                       backgroundColor: AppColors.success,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -124,10 +129,7 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                 ),
                 child: const Text(
                   'Complete & Update Tracker',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             );
@@ -152,7 +154,8 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                       // Title
                       Text(
                         adhkar['title'],
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               color: isComplete
                                   ? AppColors.success
                                   : AppColors.gold,
@@ -174,12 +177,20 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                           ),
                         ),
                         child: Text(
-                          adhkar['arabic'],
+                          ArabicTextHelper.reshape(adhkar['arabic']),
                           textAlign: TextAlign.center,
                           textDirection: TextDirection.rtl,
                           style: TextStyle(
-                            fontFamily: 'serif', // Ensure Uthmanic/serif font is used
-                            fontSize: (24 * textScale).toDouble(),
+                            fontFamily:
+                                'KFGQPC Uthman Taha Naskh', // Ensure Uthmanic font is used
+                            fontFamilyFallback: const ['Courier', 'monospace'],
+                            fontFeatures: const [
+                              FontFeature.enable('liga'),
+                              FontFeature.enable('rlig'),
+                              FontFeature.enable('calt'),
+                              FontFeature.enable('ccmp'),
+                            ],
+                            fontSize: (28 * textScale).toDouble(),
                             color: isComplete
                                 ? AppColors.success
                                 : AppColors.goldLight,
@@ -193,10 +204,14 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                       Text(
                         adhkar['transliteration'],
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textPrimary,
-                              fontStyle: FontStyle.italic,
-                              fontSize: (textScale == 1.0 ? 14.0 : 14 * (1 + (textScale - 1) * 0.5)).toDouble(), // Safe cast
-                            ),
+                          color: AppColors.textPrimary,
+                          fontStyle: FontStyle.italic,
+                          fontSize:
+                              (textScale == 1.0
+                                      ? 14.0
+                                      : 14 * (1 + (textScale - 1) * 0.5))
+                                  .toDouble(), // Safe cast
+                        ),
                       ),
                       const SizedBox(height: 12),
 
@@ -204,12 +219,28 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                       Text(
                         adhkar['translation'],
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                              height: 1.5,
-                              fontSize: (textScale == 1.0 ? 14.0 : 14 * (1 + (textScale - 1) * 0.5)).toDouble(), // Safe cast
-                            ),
+                          color: AppColors.textSecondary,
+                          height: 1.5,
+                          fontSize:
+                              (textScale == 1.0
+                                      ? 14.0
+                                      : 14 * (1 + (textScale - 1) * 0.5))
+                                  .toDouble(), // Safe cast
+                        ),
                       ),
-                      
+                      if (adhkar['source'] != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Source: ${adhkar['source']}',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: AppColors.textDim,
+                                fontStyle: FontStyle.italic,
+                                height: 1.4,
+                              ),
+                        ),
+                      ],
+
                       // Spacing for target counter
                       if (target > 1) const SizedBox(height: 40),
                     ],
@@ -222,7 +253,9 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                       right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: isComplete
                               ? AppColors.success.withValues(alpha: 0.2)
@@ -238,19 +271,24 @@ class _AdhkarScreenState extends ConsumerState<AdhkarScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (isComplete) ...[
-                              const Icon(Icons.check_circle,
-                                  color: AppColors.success, size: 16),
+                              const Icon(
+                                Icons.check_circle,
+                                color: AppColors.success,
+                                size: 16,
+                              ),
                               const SizedBox(width: 6),
                             ],
                             Text(
-                              isComplete ? 'Complete' : '$currentCount / $target',
+                              isComplete
+                                  ? 'Complete'
+                                  : '$currentCount / $target',
                               style: TextStyle(
                                 color: isComplete
                                     ? AppColors.success
                                     : AppColors.gold,
                                 fontWeight: FontWeight.bold,
                                 fontFeatures: const [
-                                  FontFeature.tabularFigures()
+                                  FontFeature.tabularFigures(),
                                 ],
                               ),
                             ),
