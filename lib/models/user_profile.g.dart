@@ -28,13 +28,14 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       latitude: fields[8] as double?,
       longitude: fields[9] as double?,
       quranStartPage: fields[10] as int?,
+      preferredTranslationKey: fields[11] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserProfile obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(9)
       ..write(obj.longitude)
       ..writeByte(10)
-      ..write(obj.quranStartPage);
+      ..write(obj.quranStartPage)
+      ..writeByte(11)
+      ..write(obj.preferredTranslationKey);
   }
 
   @override

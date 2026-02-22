@@ -5,6 +5,8 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'models/daily_record.dart';
 import 'models/user_profile.dart';
+import 'models/quran_translation.dart';
+import 'models/quran_bookmark.dart';
 import 'providers/app_providers.dart';
 import 'services/notification_service.dart';
 import 'screens/home_screen.dart';
@@ -14,12 +16,15 @@ import 'screens/journey_screen.dart';
 import 'screens/dua_library_screen.dart';
 import 'screens/muhasabah_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/quran_surah_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(DailyRecordAdapter());
   Hive.registerAdapter(UserProfileAdapter());
+  Hive.registerAdapter(CachedTranslationAdapter());
+  Hive.registerAdapter(QuranBookmarkAdapter());
   await NotificationService.init();
 
   runApp(const ProviderScope(child: IhsanApp()));
@@ -180,6 +185,10 @@ class _MainShellState extends ConsumerState<_MainShell> {
                 ),
                 // More menu — with animated transitions for subpages
                 _MoreButton(
+                  onQuranTap: () => Navigator.push(
+                    context,
+                    _SlideUpRoute(child: const QuranSurahListScreen()),
+                  ),
                   onDuaTap: () => Navigator.push(
                     context,
                     _SlideUpRoute(child: const DuaLibraryScreen()),
@@ -292,10 +301,11 @@ class _NavItem extends StatelessWidget {
 }
 
 class _MoreButton extends StatelessWidget {
+  final VoidCallback onQuranTap;
   final VoidCallback onDuaTap;
   final VoidCallback onMuhasabahTap;
 
-  const _MoreButton({required this.onDuaTap, required this.onMuhasabahTap});
+  const _MoreButton({required this.onQuranTap, required this.onDuaTap, required this.onMuhasabahTap});
 
   @override
   Widget build(BuildContext context) {
@@ -303,12 +313,26 @@ class _MoreButton extends StatelessWidget {
       child: PopupMenuButton<String>(
         color: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        offset: const Offset(0, -120),
+        offset: const Offset(0, -170),
         onSelected: (value) {
+          if (value == 'quran') onQuranTap();
           if (value == 'dua') onDuaTap();
           if (value == 'muhasabah') onMuhasabahTap();
         },
         itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'quran',
+            child: Row(
+              children: [
+                const Icon(Icons.menu_book, color: AppColors.gold, size: 18),
+                const SizedBox(width: 10),
+                Text(
+                  'Quran',
+                  style: TextStyle(color: AppColors.textPrimary),
+                ),
+              ],
+            ),
+          ),
           PopupMenuItem(
             value: 'dua',
             child: Row(

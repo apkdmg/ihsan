@@ -4,6 +4,24 @@ import 'package:intl/intl.dart';
 import '../models/daily_record.dart';
 import '../models/user_profile.dart';
 
+// ── Text Scale (Arabic text accessibility) ──
+class TextScaleNotifier extends Notifier<double> {
+  @override
+  double build() => 1.0;
+
+  void increase() {
+    if (state < 2.0) state += 0.2;
+  }
+
+  void decrease() {
+    if (state > 0.8) state -= 0.2;
+  }
+}
+
+final textScaleProvider = NotifierProvider<TextScaleNotifier, double>(
+  TextScaleNotifier.new,
+);
+
 // ── Hive box names ──
 const String _dailyRecordsBox = 'daily_records';
 const String _userProfileBox = 'user_profile';

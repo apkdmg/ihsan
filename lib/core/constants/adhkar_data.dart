@@ -394,7 +394,7 @@ class AdhkarData {
       'transliteration': transliteration,
       'translation': translation,
       'repetitions': repetitions,
-      'source': ?source,
+      if (source != null) 'source': source,
     };
   }
 }

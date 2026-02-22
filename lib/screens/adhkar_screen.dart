@@ -7,24 +7,6 @@ import '../core/theme/app_colors.dart';
 import '../providers/app_providers.dart';
 import '../widgets/common_widgets.dart';
 
-// Global state for Arabic text scaling (accessibility)
-class TextScaleNotifier extends Notifier<double> {
-  @override
-  double build() => 1.0;
-
-  void increase() {
-    if (state < 2.0) state += 0.2;
-  }
-
-  void decrease() {
-    if (state > 0.8) state -= 0.2;
-  }
-}
-
-final textScaleProvider = NotifierProvider<TextScaleNotifier, double>(
-  TextScaleNotifier.new,
-);
-
 class AdhkarScreen extends ConsumerStatefulWidget {
   final bool isMorning;
 
