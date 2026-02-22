@@ -52,25 +52,27 @@ class QuranVerseCard extends StatelessWidget {
               children: [
                 _VerseNumberBadge(number: verseNumber),
                 const Spacer(),
-                if (onStopPointTap != null)
-                  GestureDetector(
-                    onTap: onStopPointTap,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Icon(
-                        isStopPoint ? Icons.flag : Icons.flag_outlined,
-                        color: isStopPoint ? AppColors.gold : AppColors.textDim,
-                        size: 20,
-                      ),
-                    ),
-                  ),
                 if (onBookmarkTap != null)
                   GestureDetector(
                     onTap: onBookmarkTap,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Icon(
+                        isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                        color: isBookmarked
+                            ? AppColors.gold
+                            : AppColors.textDim,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                if (onStopPointTap != null)
+                  GestureDetector(
+                    onTap: onStopPointTap,
                     child: Icon(
-                      isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                      color: isBookmarked ? AppColors.gold : AppColors.textDim,
-                      size: 22,
+                      isStopPoint ? Icons.flag : Icons.flag_outlined,
+                      color: isStopPoint ? AppColors.gold : AppColors.textDim,
+                      size: 20,
                     ),
                   ),
               ],

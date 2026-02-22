@@ -540,6 +540,26 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
                               p.quranStopPage = verse.page;
                               return p;
                             });
+
+                            // Auto-update daily tracker completed pages
+                            // The target completed page is the page *before* the current stop point
+                            final targetCompletedPage = verse.page > 1
+                                ? verse.page - 1
+                                : 0;
+                            final record = ref.read(dailyRecordProvider);
+                            final currentLastPage = record.quranLastPage ?? 0;
+
+                            if (targetCompletedPage > currentLastPage) {
+                              final pagesRead =
+                                  record.quranPagesRead +
+                                  (targetCompletedPage - currentLastPage);
+                              ref
+                                  .read(dailyRecordProvider.notifier)
+                                  .updateQuranLog(
+                                    pagesRead,
+                                    targetCompletedPage,
+                                  );
+                            }
                           },
                         );
                     }

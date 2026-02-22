@@ -1089,7 +1089,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -1115,14 +1115,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         if (currentCompletedPage > baseCompletedPage) {
+                          final newCompleted = currentCompletedPage - 1;
                           ref
                               .read(dailyRecordProvider.notifier)
-                              .updateQuranLog(
-                                pagesRead - 1,
-                                currentCompletedPage - 1,
-                              );
+                              .updateQuranLog(pagesRead - 1, newCompleted);
+                          await _syncStopPointFromPage(ref, newCompleted);
                         }
                       },
                       behavior: HitTestBehavior.opaque,
@@ -1163,14 +1162,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ],
                     ),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         if (currentCompletedPage < 604) {
+                          final newCompleted = currentCompletedPage + 1;
                           ref
                               .read(dailyRecordProvider.notifier)
-                              .updateQuranLog(
-                                pagesRead + 1,
-                                currentCompletedPage + 1,
-                              );
+                              .updateQuranLog(pagesRead + 1, newCompleted);
+                          await _syncStopPointFromPage(ref, newCompleted);
                         }
                       },
                       behavior: HitTestBehavior.opaque,
@@ -1203,9 +1201,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     if (stopSurah != null && stopAyah != null && stopPage != null) {
       final surahName = QuranSurahData.surahs[stopSurah - 1].nameEn;
-      return 'Pg $stopPage · $surahName · Ayah $stopAyah';
+      return 'Page $stopPage, $surahName : $stopAyah';
     }
     return 'Page ${currentCompletedPage + 1}';
+  }
+
+  /// Syncs the stop point to the 1st ayah of [completedPage + 1].
+  /// Called when the +/- stepper is tapped.
+  Future<void> _syncStopPointFromPage(WidgetRef ref, int completedPage) async {
+    final nextPage = completedPage + 1;
+    final service = ref.read(quranServiceProvider);
+    final verse = await service.getFirstVerseOnPage(nextPage);
+    if (verse == null) return;
+
+    ref
+        .read(quranStopPointProvider.notifier)
+        .set(
+          QuranStopPoint(
+            surah: verse.surahNumber,
+            ayah: verse.ayahNumber,
+            page: nextPage,
+          ),
+        );
+    ref.read(userProfileProvider.notifier).update((p) {
+      p.quranStopSurah = verse.surahNumber;
+      p.quranStopAyah = verse.ayahNumber;
+      p.quranStopPage = nextPage;
+      return p;
+    });
   }
 
   Widget _buildDailyVerseCard(BuildContext context, int dayOfRamadan) {
