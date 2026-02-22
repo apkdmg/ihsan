@@ -41,6 +41,47 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
   /// Show Bismillah for all surahs except Al-Fatiha (1) and At-Taubah (9).
   bool get _hasBismillah => widget.surahNumber != 1 && widget.surahNumber != 9;
 
+  // Standard Juz start pages (Hafs, 604-page Mushaf)
+  static const List<int> _juzStartPages = [
+    1,
+    22,
+    42,
+    62,
+    82,
+    102,
+    121,
+    142,
+    162,
+    182,
+    201,
+    222,
+    242,
+    262,
+    282,
+    302,
+    322,
+    342,
+    362,
+    382,
+    402,
+    422,
+    442,
+    462,
+    482,
+    502,
+    522,
+    542,
+    562,
+    582,
+  ];
+
+  int _juzFromPage(int page) {
+    for (int i = _juzStartPages.length - 1; i >= 0; i--) {
+      if (page >= _juzStartPages[i]) return i + 1;
+    }
+    return 1;
+  }
+
   void _scrollToAyah(int ayahNumber) {
     final listIndex = _ayahToListIndex(ayahNumber);
     _itemScrollController.scrollTo(
@@ -323,7 +364,7 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
             ),
             Text(
               _currentPage > 0
-                  ? 'Page $_currentPage'
+                  ? 'Juz ${_juzFromPage(_currentPage)}'
                   : ArabicTextHelper.reshape(_surahInfo.nameAr),
               textDirection: _currentPage > 0
                   ? TextDirection.ltr
