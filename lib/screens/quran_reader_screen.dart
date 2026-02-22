@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../core/constants/quran_data.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/arabic_text_helper.dart';
@@ -22,29 +23,19 @@ class QuranReaderScreen extends ConsumerStatefulWidget {
 }
 
 class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
-  final ScrollController _scrollController = ScrollController();
-  final Map<int, GlobalKey> _verseKeys = {};
+  final ItemScrollController _itemScrollController = ItemScrollController();
   bool _scrolledToInitial = false;
 
   SurahInfo get _surahInfo =>
       QuranSurahData.surahs[widget.surahNumber - 1];
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   void _scrollToAyah(int ayahNumber) {
-    final key = _verseKeys[ayahNumber];
-    if (key?.currentContext != null) {
-      Scrollable.ensureVisible(
-        key!.currentContext!,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-        alignment: 0.1,
-      );
-    }
+    // Ayah N is at list index N-1
+    _itemScrollController.scrollTo(
+      index: ayahNumber - 1,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _showGoToAyah(int maxAyah) {
@@ -270,8 +261,8 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
             });
           }
 
-          return ListView.builder(
-            controller: _scrollController,
+          return ScrollablePositionedList.builder(
+            itemScrollController: _itemScrollController,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
             itemCount: verses.length + 1, // +1 for nav footer
@@ -289,8 +280,6 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
               }
 
               final verse = verses[index];
-              final verseKey =
-                  _verseKeys.putIfAbsent(verse.ayahNumber, () => GlobalKey());
 
               String? translationText;
               String? footnoteText;
@@ -309,23 +298,20 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
                     b.ayahNumber == verse.ayahNumber,
               );
 
-              return KeyedSubtree(
-                key: verseKey,
-                child: QuranVerseCard(
-                  verseNumber: verse.ayahNumber,
-                  arabicText: mode != QuranReadingMode.translationFocus
-                      ? verse.ayahText
-                      : null,
-                  translationText: translationText,
-                  footnotes: footnoteText,
-                  mode: mode,
-                  textScale: textScale,
-                  isBookmarked: isMarked,
-                  onBookmarkTap: () => _showBookmarkDialog(
-                    verse.ayahNumber,
-                    verse.page,
-                    verse.surahNameEn,
-                  ),
+              return QuranVerseCard(
+                verseNumber: verse.ayahNumber,
+                arabicText: mode != QuranReadingMode.translationFocus
+                    ? verse.ayahText
+                    : null,
+                translationText: translationText,
+                footnotes: footnoteText,
+                mode: mode,
+                textScale: textScale,
+                isBookmarked: isMarked,
+                onBookmarkTap: () => _showBookmarkDialog(
+                  verse.ayahNumber,
+                  verse.page,
+                  verse.surahNameEn,
                 ),
               );
             },
