@@ -26,13 +26,22 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
   final ItemScrollController _itemScrollController = ItemScrollController();
   bool _scrolledToInitial = false;
 
+  /// PUA-encoded Bismillah from HafsSmart font (Al-Fatiha ayah 1 text).
+  static const String _bismillahText =
+      '\u200f\ue8db \u200f\ue338\u200f\ue48e \u200f\ue338\u200f\ue0af\u200f\ue238\u200f\ue903 \u200f\ue338\u200f\ue0af\u200f\ue238\u200f\ue045\u200f\ue1c0\u200f\ue2e5 \u200f\ue95a';
+
   SurahInfo get _surahInfo =>
       QuranSurahData.surahs[widget.surahNumber - 1];
 
+  /// Show Bismillah for all surahs except Al-Fatiha (1) and At-Taubah (9).
+  bool get _hasBismillah =>
+      widget.surahNumber != 1 && widget.surahNumber != 9;
+
   void _scrollToAyah(int ayahNumber) {
-    // Ayah N is at list index N-1
+    // Ayah N is at list index N-1, plus 1 if Bismillah header is present
+    final offset = _hasBismillah ? 1 : 0;
     _itemScrollController.scrollTo(
-      index: ayahNumber - 1,
+      index: ayahNumber - 1 + offset,
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
     );
@@ -240,6 +249,16 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
             onPressed: () => _showGoToAyah(_surahInfo.verseCount),
             tooltip: 'Go to ayah',
           ),
+          IconButton(
+            icon: const Icon(Icons.text_decrease, size: 20),
+            onPressed: () => ref.read(textScaleProvider.notifier).decrease(),
+            tooltip: 'Decrease text size',
+          ),
+          IconButton(
+            icon: const Icon(Icons.text_increase, size: 20),
+            onPressed: () => ref.read(textScaleProvider.notifier).increase(),
+            tooltip: 'Increase text size',
+          ),
           const SizedBox(width: 4),
         ],
         bottom: PreferredSize(
@@ -261,13 +280,24 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
             });
           }
 
+          final bismillahOffset = _hasBismillah ? 1 : 0;
+
           return ScrollablePositionedList.builder(
             itemScrollController: _itemScrollController,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
-            itemCount: verses.length + 1, // +1 for nav footer
+            itemCount:
+                verses.length + bismillahOffset + 1, // +bismillah +footer
             itemBuilder: (context, index) {
-              if (index == verses.length) {
+              // Bismillah header at index 0
+              if (_hasBismillah && index == 0) {
+                return _BismillahHeader(textScale: textScale);
+              }
+
+              final verseIndex = index - bismillahOffset;
+
+              // Nav footer after last verse
+              if (verseIndex == verses.length) {
                 return _SurahNavFooter(
                   surahNumber: widget.surahNumber,
                   onPrevious: widget.surahNumber > 1
@@ -279,15 +309,15 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
                 );
               }
 
-              final verse = verses[index];
+              final verse = verses[verseIndex];
 
               String? translationText;
               String? footnoteText;
               if (mode != QuranReadingMode.arabicFocus) {
                 translationAsync.whenData((t) {
-                  if (index < t.verses.length) {
-                    translationText = t.verses[index];
-                    footnoteText = t.footnotes[index];
+                  if (verseIndex < t.verses.length) {
+                    translationText = t.verses[verseIndex];
+                    footnoteText = t.footnotes[verseIndex];
                   }
                 });
               }
@@ -425,6 +455,32 @@ class _ModeChip extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BismillahHeader extends StatelessWidget {
+  final double textScale;
+
+  const _BismillahHeader({required this.textScale});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Center(
+        child: Text(
+          _QuranReaderScreenState._bismillahText,
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.rtl,
+          style: TextStyle(
+            fontFamily: 'HafsSmart',
+            fontSize: (28 * textScale).toDouble(),
+            color: AppColors.gold,
+            height: 2.0,
           ),
         ),
       ),
