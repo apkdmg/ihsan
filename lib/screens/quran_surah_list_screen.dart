@@ -5,6 +5,7 @@ import '../core/theme/app_colors.dart';
 import '../core/utils/arabic_text_helper.dart';
 import '../providers/app_providers.dart';
 import '../providers/quran_providers.dart';
+import '../widgets/quran_display_settings_sheet.dart';
 import 'quran_reader_screen.dart';
 
 class QuranSurahListScreen extends ConsumerStatefulWidget {
@@ -37,9 +38,9 @@ class _QuranSurahListScreenState extends ConsumerState<QuranSurahListScreen>
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             QuranReaderScreen(
-          surahNumber: surahNumber,
-          initialAyah: initialAyah,
-        ),
+              surahNumber: surahNumber,
+              initialAyah: initialAyah,
+            ),
         transitionDuration: const Duration(milliseconds: 400),
         reverseTransitionDuration: const Duration(milliseconds: 300),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -79,9 +80,9 @@ class _QuranSurahListScreenState extends ConsumerState<QuranSurahListScreen>
           onSelected: (key) {
             ref.read(selectedTranslationKeyProvider.notifier).set(key);
             // Persist to UserProfile
-            ref.read(userProfileProvider.notifier).update(
-              (p) => p..preferredTranslationKey = key,
-            );
+            ref
+                .read(userProfileProvider.notifier)
+                .update((p) => p..preferredTranslationKey = key);
             Navigator.pop(context);
           },
         ),
@@ -122,8 +123,10 @@ class _QuranSurahListScreenState extends ConsumerState<QuranSurahListScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child:
-                const Text('Cancel', style: TextStyle(color: AppColors.textDim)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textDim),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -147,6 +150,17 @@ class _QuranSurahListScreenState extends ConsumerState<QuranSurahListScreen>
     );
   }
 
+  void _showDisplaySettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const QuranDisplaySettingsSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textScale = ref.watch(textScaleProvider);
@@ -161,19 +175,14 @@ class _QuranSurahListScreenState extends ConsumerState<QuranSurahListScreen>
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         actions: [
           IconButton(
+            icon: const Icon(Icons.format_size, size: 20),
+            onPressed: _showDisplaySettings,
+            tooltip: 'Display Settings',
+          ),
+          IconButton(
             icon: const Icon(Icons.translate, size: 20),
             onPressed: _showTranslationPicker,
             tooltip: 'Change translation',
-          ),
-          IconButton(
-            icon: const Icon(Icons.text_decrease, size: 20),
-            onPressed: () => ref.read(textScaleProvider.notifier).decrease(),
-            tooltip: 'Decrease text size',
-          ),
-          IconButton(
-            icon: const Icon(Icons.text_increase, size: 20),
-            onPressed: () => ref.read(textScaleProvider.notifier).increase(),
-            tooltip: 'Increase text size',
           ),
           const SizedBox(width: 4),
         ],
@@ -202,7 +211,8 @@ class _QuranSurahListScreenState extends ConsumerState<QuranSurahListScreen>
           // Bookmarks tab
           _BookmarksTab(
             bookmarks: bookmarks,
-            onBookmarkTap: (b) => _openReader(b.surahNumber, initialAyah: b.ayahNumber),
+            onBookmarkTap: (b) =>
+                _openReader(b.surahNumber, initialAyah: b.ayahNumber),
             onBookmarkDelete: (id) =>
                 ref.read(quranBookmarksProvider.notifier).removeBookmark(id),
           ),
@@ -442,8 +452,7 @@ class _BookmarksTab extends StatelessWidget {
             onTap: () => onBookmarkTap(b),
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 4),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: AppColors.surface.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(14),
@@ -569,8 +578,7 @@ class _TranslationPickerSheetState
               final filtered = _search.isEmpty
                   ? translations
                   : translations.where((t) {
-                      final name =
-                          (t['title'] ?? '').toString().toLowerCase();
+                      final name = (t['title'] ?? '').toString().toLowerCase();
                       final lang = (t['language_iso_code'] ?? '')
                           .toString()
                           .toLowerCase();
@@ -627,8 +635,7 @@ class _TranslationPickerSheetState
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () =>
-                          ref.invalidate(translationListProvider),
+                      onPressed: () => ref.invalidate(translationListProvider),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
                         foregroundColor: AppColors.backgroundPrimary,

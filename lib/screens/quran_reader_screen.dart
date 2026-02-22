@@ -6,6 +6,7 @@ import '../core/theme/app_colors.dart';
 import '../core/utils/arabic_text_helper.dart';
 import '../providers/app_providers.dart';
 import '../providers/quran_providers.dart';
+import '../widgets/quran_display_settings_sheet.dart';
 import '../widgets/quran_verse_card.dart';
 
 class QuranReaderScreen extends ConsumerStatefulWidget {
@@ -30,12 +31,10 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
   static const String _bismillahText =
       '\u200f\ue8db \u200f\ue338\u200f\ue48e \u200f\ue338\u200f\ue0af\u200f\ue238\u200f\ue903 \u200f\ue338\u200f\ue0af\u200f\ue238\u200f\ue045\u200f\ue1c0\u200f\ue2e5 \u200f\ue95a';
 
-  SurahInfo get _surahInfo =>
-      QuranSurahData.surahs[widget.surahNumber - 1];
+  SurahInfo get _surahInfo => QuranSurahData.surahs[widget.surahNumber - 1];
 
   /// Show Bismillah for all surahs except Al-Fatiha (1) and At-Taubah (9).
-  bool get _hasBismillah =>
-      widget.surahNumber != 1 && widget.surahNumber != 9;
+  bool get _hasBismillah => widget.surahNumber != 1 && widget.surahNumber != 9;
 
   void _scrollToAyah(int ayahNumber) {
     // Ayah N is at list index N-1, plus 1 if Bismillah header is present
@@ -80,8 +79,10 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textDim)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textDim),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -102,19 +103,16 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
 
   void _showBookmarkDialog(int ayahNumber, int page, String surahNameEn) {
     final controller = TextEditingController();
-    final isAlreadyBookmarked =
-        ref.read(quranBookmarksProvider.notifier).isBookmarked(
-              widget.surahNumber,
-              ayahNumber,
-            );
+    final isAlreadyBookmarked = ref
+        .read(quranBookmarksProvider.notifier)
+        .isBookmarked(widget.surahNumber, ayahNumber);
 
     if (isAlreadyBookmarked) {
       // Find and remove
       final bookmarks = ref.read(quranBookmarksProvider);
       final existing = bookmarks.firstWhere(
         (b) =>
-            b.surahNumber == widget.surahNumber &&
-            b.ayahNumber == ayahNumber,
+            b.surahNumber == widget.surahNumber && b.ayahNumber == ayahNumber,
       );
       ref.read(quranBookmarksProvider.notifier).removeBookmark(existing.id);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -156,12 +154,16 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textDim)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textDim),
+            ),
           ),
           TextButton(
             onPressed: () {
-              ref.read(quranBookmarksProvider.notifier).addBookmark(
+              ref
+                  .read(quranBookmarksProvider.notifier)
+                  .addBookmark(
                     surahNumber: widget.surahNumber,
                     ayahNumber: ayahNumber,
                     page: page,
@@ -199,6 +201,17 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
     );
   }
 
+  void _showDisplaySettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const QuranDisplaySettingsSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mode = ref.watch(quranReadingModeProvider);
@@ -208,9 +221,10 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
 
     final versesAsync = ref.watch(surahVersesProvider(widget.surahNumber));
     final translationAsync = ref.watch(
-      surahTranslationProvider(
-        (key: translationKey, surah: widget.surahNumber),
-      ),
+      surahTranslationProvider((
+        key: translationKey,
+        surah: widget.surahNumber,
+      )),
     );
 
     return Scaffold(
@@ -245,19 +259,14 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.format_size, size: 20),
+            onPressed: _showDisplaySettings,
+            tooltip: 'Display Settings',
+          ),
+          IconButton(
             icon: const Icon(Icons.format_list_numbered, size: 20),
             onPressed: () => _showGoToAyah(_surahInfo.verseCount),
             tooltip: 'Go to ayah',
-          ),
-          IconButton(
-            icon: const Icon(Icons.text_decrease, size: 20),
-            onPressed: () => ref.read(textScaleProvider.notifier).decrease(),
-            tooltip: 'Decrease text size',
-          ),
-          IconButton(
-            icon: const Icon(Icons.text_increase, size: 20),
-            onPressed: () => ref.read(textScaleProvider.notifier).increase(),
-            tooltip: 'Increase text size',
           ),
           const SizedBox(width: 4),
         ],
@@ -450,8 +459,7 @@ class _ModeChip extends StatelessWidget {
                 style: TextStyle(
                   color: isSelected ? AppColors.gold : AppColors.textDim,
                   fontSize: 12,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ],
