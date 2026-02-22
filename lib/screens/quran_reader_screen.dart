@@ -4,6 +4,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../core/constants/quran_data.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/arabic_text_helper.dart';
+import '../models/quran_verse.dart';
 import '../providers/app_providers.dart';
 import '../providers/quran_providers.dart';
 import '../widgets/quran_display_settings_sheet.dart';
@@ -25,7 +26,11 @@ class QuranReaderScreen extends ConsumerStatefulWidget {
 
 class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
   final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
   bool _scrolledToInitial = false;
+  int _currentPage = 0;
+  List<QuranVerse>? _cachedVerses;
 
   /// PUA-encoded Bismillah from HafsSmart font (Al-Fatiha ayah 1 text).
   static const String _bismillahText =
@@ -37,13 +42,90 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
   bool get _hasBismillah => widget.surahNumber != 1 && widget.surahNumber != 9;
 
   void _scrollToAyah(int ayahNumber) {
-    // Ayah N is at list index N-1, plus 1 if Bismillah header is present
-    final offset = _hasBismillah ? 1 : 0;
+    final listIndex = _ayahToListIndex(ayahNumber);
     _itemScrollController.scrollTo(
-      index: ayahNumber - 1 + offset,
+      index: listIndex,
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  /// Build a flat list of items: bismillah, verses interleaved with page dividers, footer.
+  /// Each entry is either a verse, a page divider, the bismillah, or the footer.
+  List<_ListItem> _buildListItems(List<QuranVerse> verses) {
+    final items = <_ListItem>[];
+
+    if (_hasBismillah) {
+      items.add(const _ListItem.bismillah());
+    }
+
+    for (int i = 0; i < verses.length; i++) {
+      // Insert page divider before this verse if its page differs from the previous verse
+      if (i > 0 && verses[i].page != verses[i - 1].page) {
+        items.add(_ListItem.pageDivider(verses[i - 1].page));
+      }
+      items.add(_ListItem.verse(i));
+    }
+
+    items.add(const _ListItem.footer());
+    return items;
+  }
+
+  /// Convert ayah number to list index (accounting for bismillah + page dividers).
+  int _ayahToListIndex(int ayahNumber) {
+    if (_cachedVerses == null) return 0;
+    final items = _buildListItems(_cachedVerses!);
+    for (int i = 0; i < items.length; i++) {
+      if (items[i].type == _ListItemType.verse &&
+          _cachedVerses![items[i].verseIndex!].ayahNumber == ayahNumber) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  /// Derive current mushaf page from visible list items.
+  void _onPositionsChanged(List<QuranVerse> verses, List<_ListItem> items) {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty || verses.isEmpty) return;
+
+    // Find the topmost visible verse
+    final sorted = positions.toList()
+      ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+
+    for (final pos in sorted) {
+      if (pos.index < items.length) {
+        final item = items[pos.index];
+        if (item.type == _ListItemType.verse) {
+          final page = verses[item.verseIndex!].page;
+          if (page != _currentPage) {
+            setState(() => _currentPage = page);
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  void _scrollToPage(
+    List<QuranVerse> verses,
+    List<_ListItem> items,
+    int targetPage,
+  ) {
+    // Find the first verse on the target page
+    for (int i = 0; i < items.length; i++) {
+      if (items[i].type == _ListItemType.verse) {
+        final verse = verses[items[i].verseIndex!];
+        if (verse.page == targetPage) {
+          _itemScrollController.scrollTo(
+            index: i,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+          );
+          return;
+        }
+      }
+    }
   }
 
   void _showGoToAyah(int maxAyah) {
@@ -218,6 +300,7 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
     final translationKey = ref.watch(selectedTranslationKeyProvider);
     final textScale = ref.watch(textScaleProvider);
     final bookmarks = ref.watch(quranBookmarksProvider);
+    final stopPoint = ref.watch(quranStopPointProvider);
 
     final versesAsync = ref.watch(surahVersesProvider(widget.surahNumber));
     final translationAsync = ref.watch(
@@ -239,18 +322,26 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
               style: const TextStyle(color: AppColors.gold, fontSize: 16),
             ),
             Text(
-              ArabicTextHelper.reshape(_surahInfo.nameAr),
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                fontFamily: 'KFGQPC Uthman Taha Naskh',
-                fontFeatures: [
-                  FontFeature.enable('liga'),
-                  FontFeature.enable('rlig'),
-                  FontFeature.enable('calt'),
-                  FontFeature.enable('ccmp'),
-                ],
+              _currentPage > 0
+                  ? 'Page $_currentPage'
+                  : ArabicTextHelper.reshape(_surahInfo.nameAr),
+              textDirection: _currentPage > 0
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
+              style: TextStyle(
+                fontFamily: _currentPage > 0
+                    ? null
+                    : 'KFGQPC Uthman Taha Naskh',
+                fontFeatures: _currentPage > 0
+                    ? null
+                    : const [
+                        FontFeature.enable('liga'),
+                        FontFeature.enable('rlig'),
+                        FontFeature.enable('calt'),
+                        FontFeature.enable('ccmp'),
+                      ],
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 13,
                 height: 1.5,
               ),
             ),
@@ -281,6 +372,24 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
       ),
       body: versesAsync.when(
         data: (verses) {
+          _cachedVerses = verses;
+          final items = _buildListItems(verses);
+
+          // Listen for scroll position changes
+          _itemPositionsListener.itemPositions.removeListener(() {});
+          _itemPositionsListener.itemPositions.addListener(() {
+            _onPositionsChanged(verses, items);
+          });
+
+          // Set initial page
+          if (_currentPage == 0 && verses.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_currentPage == 0 && verses.isNotEmpty) {
+                setState(() => _currentPage = verses.first.page);
+              }
+            });
+          }
+
           // Scroll to initial ayah after first build
           if (!_scrolledToInitial && widget.initialAyah != null) {
             _scrolledToInitial = true;
@@ -289,71 +398,114 @@ class _QuranReaderScreenState extends ConsumerState<QuranReaderScreen> {
             });
           }
 
-          final bismillahOffset = _hasBismillah ? 1 : 0;
-
-          return ScrollablePositionedList.builder(
-            itemScrollController: _itemScrollController,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
-            itemCount:
-                verses.length + bismillahOffset + 1, // +bismillah +footer
-            itemBuilder: (context, index) {
-              // Bismillah header at index 0
-              if (_hasBismillah && index == 0) {
-                return _BismillahHeader(textScale: textScale);
-              }
-
-              final verseIndex = index - bismillahOffset;
-
-              // Nav footer after last verse
-              if (verseIndex == verses.length) {
-                return _SurahNavFooter(
-                  surahNumber: widget.surahNumber,
-                  onPrevious: widget.surahNumber > 1
-                      ? () => _navigateToSurah(widget.surahNumber - 1)
-                      : null,
-                  onNext: widget.surahNumber < 114
-                      ? () => _navigateToSurah(widget.surahNumber + 1)
-                      : null,
-                );
-              }
-
-              final verse = verses[verseIndex];
-
-              String? translationText;
-              String? footnoteText;
-              if (mode != QuranReadingMode.arabicFocus) {
-                translationAsync.whenData((t) {
-                  if (verseIndex < t.verses.length) {
-                    translationText = t.verses[verseIndex];
-                    footnoteText = t.footnotes[verseIndex];
+          return Column(
+            children: [
+              // Page navigation bar
+              _PageNavBar(
+                currentPage: _currentPage,
+                onPrevPage: () {
+                  if (_currentPage > 1) {
+                    _scrollToPage(verses, items, _currentPage - 1);
                   }
-                });
-              }
+                },
+                onNextPage: () {
+                  if (_currentPage < 604) {
+                    _scrollToPage(verses, items, _currentPage + 1);
+                  }
+                },
+              ),
+              Expanded(
+                child: ScrollablePositionedList.builder(
+                  itemScrollController: _itemScrollController,
+                  itemPositionsListener: _itemPositionsListener,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
 
-              final isMarked = bookmarks.any(
-                (b) =>
-                    b.surahNumber == widget.surahNumber &&
-                    b.ayahNumber == verse.ayahNumber,
-              );
+                    switch (item.type) {
+                      case _ListItemType.bismillah:
+                        return _BismillahHeader(textScale: textScale);
 
-              return QuranVerseCard(
-                verseNumber: verse.ayahNumber,
-                arabicText: mode != QuranReadingMode.translationFocus
-                    ? verse.ayahText
-                    : null,
-                translationText: translationText,
-                footnotes: footnoteText,
-                mode: mode,
-                textScale: textScale,
-                isBookmarked: isMarked,
-                onBookmarkTap: () => _showBookmarkDialog(
-                  verse.ayahNumber,
-                  verse.page,
-                  verse.surahNameEn,
+                      case _ListItemType.pageDivider:
+                        return _PageDivider(pageNumber: item.pageNumber!);
+
+                      case _ListItemType.footer:
+                        return _SurahNavFooter(
+                          surahNumber: widget.surahNumber,
+                          onPrevious: widget.surahNumber > 1
+                              ? () => _navigateToSurah(widget.surahNumber - 1)
+                              : null,
+                          onNext: widget.surahNumber < 114
+                              ? () => _navigateToSurah(widget.surahNumber + 1)
+                              : null,
+                        );
+
+                      case _ListItemType.verse:
+                        final verse = verses[item.verseIndex!];
+                        String? translationText;
+                        String? footnoteText;
+                        if (mode != QuranReadingMode.arabicFocus) {
+                          translationAsync.whenData((t) {
+                            if (item.verseIndex! < t.verses.length) {
+                              translationText = t.verses[item.verseIndex!];
+                              footnoteText = t.footnotes[item.verseIndex!];
+                            }
+                          });
+                        }
+
+                        final isMarked = bookmarks.any(
+                          (b) =>
+                              b.surahNumber == widget.surahNumber &&
+                              b.ayahNumber == verse.ayahNumber,
+                        );
+
+                        final isStop =
+                            stopPoint?.surah == widget.surahNumber &&
+                            stopPoint?.ayah == verse.ayahNumber;
+
+                        return QuranVerseCard(
+                          verseNumber: verse.ayahNumber,
+                          arabicText: mode != QuranReadingMode.translationFocus
+                              ? verse.ayahText
+                              : null,
+                          translationText: translationText,
+                          footnotes: footnoteText,
+                          mode: mode,
+                          textScale: textScale,
+                          isBookmarked: isMarked,
+                          onBookmarkTap: () => _showBookmarkDialog(
+                            verse.ayahNumber,
+                            verse.page,
+                            verse.surahNameEn,
+                          ),
+                          isStopPoint: isStop,
+                          onStopPointTap: () {
+                            // Instant UI update via in-memory provider
+                            ref
+                                .read(quranStopPointProvider.notifier)
+                                .set(
+                                  QuranStopPoint(
+                                    surah: widget.surahNumber,
+                                    ayah: verse.ayahNumber,
+                                    page: verse.page,
+                                  ),
+                                );
+                            // Persist asynchronously
+                            ref.read(userProfileProvider.notifier).update((p) {
+                              p.quranStopSurah = widget.surahNumber;
+                              p.quranStopAyah = verse.ayahNumber;
+                              p.quranStopPage = verse.page;
+                              return p;
+                            });
+                          },
+                        );
+                    }
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
         loading: () => const Center(
@@ -566,6 +718,141 @@ class _SurahNavFooter extends StatelessWidget {
             )
           else
             const Expanded(child: SizedBox()),
+        ],
+      ),
+    );
+  }
+}
+
+// ── List Item Model ──
+
+enum _ListItemType { bismillah, verse, pageDivider, footer }
+
+class _ListItem {
+  final _ListItemType type;
+  final int? verseIndex;
+  final int? pageNumber;
+
+  const _ListItem._({required this.type, this.verseIndex, this.pageNumber});
+
+  const _ListItem.bismillah() : this._(type: _ListItemType.bismillah);
+  const _ListItem.footer() : this._(type: _ListItemType.footer);
+  _ListItem.verse(int index)
+    : this._(type: _ListItemType.verse, verseIndex: index);
+  _ListItem.pageDivider(int page)
+    : this._(type: _ListItemType.pageDivider, pageNumber: page);
+}
+
+// ── Page Divider ──
+
+class _PageDivider extends StatelessWidget {
+  final int pageNumber;
+  const _PageDivider({required this.pageNumber});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 0.5,
+              color: AppColors.surfaceLight.withValues(alpha: 0.4),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'End of Page $pageNumber',
+              style: const TextStyle(
+                color: AppColors.textDim,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              height: 0.5,
+              color: AppColors.surfaceLight.withValues(alpha: 0.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Page Navigation Bar ──
+
+class _PageNavBar extends StatelessWidget {
+  final int currentPage;
+  final VoidCallback onPrevPage;
+  final VoidCallback onNextPage;
+
+  const _PageNavBar({
+    required this.currentPage,
+    required this.onPrevPage,
+    required this.onNextPage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (currentPage == 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.5),
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.surfaceLight.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: currentPage > 1 ? onPrevPage : null,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.chevron_left,
+                size: 22,
+                color: currentPage > 1
+                    ? AppColors.gold
+                    : AppColors.textDim.withValues(alpha: 0.3),
+              ),
+            ),
+          ),
+          Text(
+            'Page $currentPage',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          GestureDetector(
+            onTap: currentPage < 604 ? onNextPage : null,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.chevron_right,
+                size: 22,
+                color: currentPage < 604
+                    ? AppColors.gold
+                    : AppColors.textDim.withValues(alpha: 0.3),
+              ),
+            ),
+          ),
         ],
       ),
     );

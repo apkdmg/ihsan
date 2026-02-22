@@ -5,14 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/islamic_data.dart';
+import '../core/constants/quran_data.dart';
 import '../core/utils/arabic_text_helper.dart';
 import '../models/daily_record.dart';
 import '../models/user_profile.dart';
 import '../providers/app_providers.dart';
+import '../providers/quran_providers.dart';
 import '../services/prayer_times_service.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/quran_log_sheet.dart';
 import 'adhkar_screen.dart';
+import 'quran_reader_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -1015,10 +1017,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // ── Left: Up Next (Clickable to open sheet) ──
+              // ── Left: Up Next (Clickable to open reader at stop point) ──
               Expanded(
                 child: GestureDetector(
-                  onTap: () => showQuranLogSheet(context, ref, record, profile),
+                  onTap: () async {
+                    // Open in Arabic mode for focused reading
+                    ref
+                        .read(quranReadingModeProvider.notifier)
+                        .set(QuranReadingMode.arabicFocus);
+                    final stopSurah = profile.quranStopSurah;
+                    final stopAyah = profile.quranStopAyah;
+                    if (stopSurah != null && stopAyah != null) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => QuranReaderScreen(
+                            surahNumber: stopSurah,
+                            initialAyah: stopAyah,
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Resolve page to first ayah for users who log manually
+                      final nextPage = currentCompletedPage + 1;
+                      final service = ref.read(quranServiceProvider);
+                      final verse = await service.getFirstVerseOnPage(nextPage);
+                      if (verse != null && context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => QuranReaderScreen(
+                              surahNumber: verse.surahNumber,
+                              initialAyah: verse.ayahNumber,
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
                   behavior: HitTestBehavior.opaque,
                   child: Row(
                     children: [
@@ -1040,7 +1074,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Up next',
+                              'Continue reading',
                               style: TextStyle(
                                 color: AppColors.textDim,
                                 fontSize: 11,
@@ -1049,12 +1083,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Page ${currentCompletedPage + 1}',
+                              _buildUpNextLabel(profile, currentCompletedPage),
                               style: const TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -1158,6 +1194,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ],
       ),
     );
+  }
+
+  String _buildUpNextLabel(UserProfile profile, int currentCompletedPage) {
+    final stopSurah = profile.quranStopSurah;
+    final stopAyah = profile.quranStopAyah;
+    final stopPage = profile.quranStopPage;
+
+    if (stopSurah != null && stopAyah != null && stopPage != null) {
+      final surahName = QuranSurahData.surahs[stopSurah - 1].nameEn;
+      return 'Pg $stopPage · $surahName · Ayah $stopAyah';
+    }
+    return 'Page ${currentCompletedPage + 1}';
   }
 
   Widget _buildDailyVerseCard(BuildContext context, int dayOfRamadan) {

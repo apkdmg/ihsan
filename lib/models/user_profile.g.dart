@@ -29,13 +29,16 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       longitude: fields[9] as double?,
       quranStartPage: fields[10] as int?,
       preferredTranslationKey: fields[11] as String?,
+      quranStopSurah: fields[12] as int?,
+      quranStopAyah: fields[13] as int?,
+      quranStopPage: fields[14] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserProfile obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -59,7 +62,13 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(10)
       ..write(obj.quranStartPage)
       ..writeByte(11)
-      ..write(obj.preferredTranslationKey);
+      ..write(obj.preferredTranslationKey)
+      ..writeByte(12)
+      ..write(obj.quranStopSurah)
+      ..writeByte(13)
+      ..write(obj.quranStopAyah)
+      ..writeByte(14)
+      ..write(obj.quranStopPage);
   }
 
   @override

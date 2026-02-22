@@ -40,6 +40,15 @@ class UserProfile extends HiveObject {
   @HiveField(11)
   String? preferredTranslationKey;
 
+  @HiveField(12)
+  int? quranStopSurah;
+
+  @HiveField(13)
+  int? quranStopAyah;
+
+  @HiveField(14)
+  int? quranStopPage;
+
   UserProfile({
     this.name = '',
     this.zoneCode = 'WLY01',
@@ -53,6 +62,9 @@ class UserProfile extends HiveObject {
     this.longitude,
     this.quranStartPage = 1,
     this.preferredTranslationKey = 'english_saheeh',
+    this.quranStopSurah,
+    this.quranStopAyah,
+    this.quranStopPage,
   });
 
   /// Get the current day of Ramadan (1-30).

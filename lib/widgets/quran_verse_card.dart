@@ -11,6 +11,8 @@ class QuranVerseCard extends StatelessWidget {
   final double textScale;
   final bool isBookmarked;
   final VoidCallback? onBookmarkTap;
+  final bool isStopPoint;
+  final VoidCallback? onStopPointTap;
 
   const QuranVerseCard({
     super.key,
@@ -22,6 +24,8 @@ class QuranVerseCard extends StatelessWidget {
     this.textScale = 1.0,
     this.isBookmarked = false,
     this.onBookmarkTap,
+    this.isStopPoint = false,
+    this.onStopPointTap,
   });
 
   @override
@@ -32,8 +36,10 @@ class QuranVerseCard extends StatelessWidget {
         color: AppColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.surfaceLight.withValues(alpha: 0.3),
-          width: 0.5,
+          color: isStopPoint
+              ? AppColors.gold.withValues(alpha: 0.4)
+              : AppColors.surfaceLight.withValues(alpha: 0.3),
+          width: isStopPoint ? 1.0 : 0.5,
         ),
       ),
       child: Padding(
@@ -46,6 +52,18 @@ class QuranVerseCard extends StatelessWidget {
               children: [
                 _VerseNumberBadge(number: verseNumber),
                 const Spacer(),
+                if (onStopPointTap != null)
+                  GestureDetector(
+                    onTap: onStopPointTap,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Icon(
+                        isStopPoint ? Icons.flag : Icons.flag_outlined,
+                        color: isStopPoint ? AppColors.gold : AppColors.textDim,
+                        size: 20,
+                      ),
+                    ),
+                  ),
                 if (onBookmarkTap != null)
                   GestureDetector(
                     onTap: onBookmarkTap,

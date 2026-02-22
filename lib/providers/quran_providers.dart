@@ -23,8 +23,8 @@ class _ReadingModeNotifier extends Notifier<QuranReadingMode> {
 
 final quranReadingModeProvider =
     NotifierProvider<_ReadingModeNotifier, QuranReadingMode>(
-  _ReadingModeNotifier.new,
-);
+      _ReadingModeNotifier.new,
+    );
 
 // ── Selected translation key (synced with UserProfile) ──
 class _TranslationKeyNotifier extends Notifier<String> {
@@ -41,40 +41,83 @@ class _TranslationKeyNotifier extends Notifier<String> {
 
 final selectedTranslationKeyProvider =
     NotifierProvider<_TranslationKeyNotifier, String>(
-  _TranslationKeyNotifier.new,
-);
+      _TranslationKeyNotifier.new,
+    );
 
 // ── Arabic verses for a surah ──
-final surahVersesProvider =
-    FutureProvider.family<List<QuranVerse>, int>((ref, surahNumber) async {
+final surahVersesProvider = FutureProvider.family<List<QuranVerse>, int>((
+  ref,
+  surahNumber,
+) async {
   final service = ref.read(quranServiceProvider);
   return service.getVersesForSurah(surahNumber);
 });
 
 // ── Translation for a surah ──
-final surahTranslationProvider = FutureProvider.family<CachedTranslation,
-    ({String key, int surah})>((ref, params) async {
-  final service = ref.read(quranServiceProvider);
-  return service.fetchSurahTranslation(
-    translationKey: params.key,
-    surahNumber: params.surah,
-  );
-});
+final surahTranslationProvider =
+    FutureProvider.family<CachedTranslation, ({String key, int surah})>((
+      ref,
+      params,
+    ) async {
+      final service = ref.read(quranServiceProvider);
+      return service.fetchSurahTranslation(
+        translationKey: params.key,
+        surahNumber: params.surah,
+      );
+    });
 
 // ── Available translations list ──
-final translationListProvider =
-    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final translationListProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
   final service = ref.read(quranServiceProvider);
   return service.fetchTranslationList();
 });
+
+// ── Stop Point (in-memory, instant UI, backed by UserProfile) ──
+class QuranStopPoint {
+  final int surah;
+  final int ayah;
+  final int page;
+  const QuranStopPoint({
+    required this.surah,
+    required this.ayah,
+    required this.page,
+  });
+}
+
+class _StopPointNotifier extends Notifier<QuranStopPoint?> {
+  @override
+  QuranStopPoint? build() {
+    final box = Hive.box<UserProfile>('user_profile');
+    final profile = box.get('profile');
+    if (profile?.quranStopSurah != null &&
+        profile?.quranStopAyah != null &&
+        profile?.quranStopPage != null) {
+      return QuranStopPoint(
+        surah: profile!.quranStopSurah!,
+        ayah: profile.quranStopAyah!,
+        page: profile.quranStopPage!,
+      );
+    }
+    return null;
+  }
+
+  void set(QuranStopPoint point) => state = point;
+}
+
+final quranStopPointProvider =
+    NotifierProvider<_StopPointNotifier, QuranStopPoint?>(
+      _StopPointNotifier.new,
+    );
 
 // ── Bookmarks ──
 const String _bookmarksBox = 'quran_bookmarks';
 
 final quranBookmarksProvider =
     NotifierProvider<QuranBookmarksNotifier, List<QuranBookmark>>(
-  QuranBookmarksNotifier.new,
-);
+      QuranBookmarksNotifier.new,
+    );
 
 class QuranBookmarksNotifier extends Notifier<List<QuranBookmark>> {
   Box<QuranBookmark>? _box;
